@@ -24,6 +24,6 @@ export const memory = new Memory({
         '- 默认模型:',
       ].join('\n'),
     },
-    observationalMemory: true,
+    // observationalMemory: true, // TODO: 表 mastra_observational_memory 未自动建,待迁移后开
   },
 });

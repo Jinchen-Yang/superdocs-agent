@@ -9,10 +9,7 @@ export const mastra = new Mastra({
   storage: new PostgresStore({ id: 'superdocs', connectionString: process.env.DATABASE_URL! }),
   server: {
     apiRoutes: [
-      registerApiRoute('/app/models', {
-        method: 'GET',
-        handler: async (c) => c.json({ models: listModels() }),
-      }),
+      registerApiRoute('/app/models', { method: 'GET', handler: async (c) => c.json({ models: listModels() }) }),
       registerApiRoute('/app/chat', {
         method: 'POST',
         handler: async (c) => {
@@ -21,13 +18,19 @@ export const mastra = new Mastra({
           const { messages, model, resource = 'owner', thread } = body || {};
           if (!messages) return c.json({ error: 'messages 必填' }, 400);
           const modelId = model && MODELS[model] ? model : DEFAULT_MODEL;
+          const threadId: string = thread || globalThis.crypto?.randomUUID?.() || `t-${Date.now()}`;
           const result: any = await docsAgent.stream(messages, {
             model: resolveModel(modelId),
-            ...(thread ? { memory: { resource, thread } } : {}),
+            memory: { resource, thread: threadId },
           });
-          if (typeof result?.toUIMessageStreamResponse === 'function') return result.toUIMessageStreamResponse();
-          if (typeof result?.toTextStreamResponse === 'function') return result.toTextStreamResponse();
-          return new Response(result?.textStream ?? '', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+          const base: Response =
+            (typeof result?.toUIMessageStreamResponse === 'function' && result.toUIMessageStreamResponse()) ||
+            (typeof result?.toTextStreamResponse === 'function' && result.toTextStreamResponse()) ||
+            new Response(result?.textStream ?? '', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+          const headers = new Headers(base.headers);
+          headers.set('X-Thread-Id', threadId);
+          headers.set('X-Model', modelId);
+          return new Response(base.body, { status: base.status, headers });
         },
       }),
     ],
