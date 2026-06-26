@@ -13,6 +13,7 @@ export const memory = new Memory({
     semanticRecall: { topK: 3, messageRange: 2, scope: 'resource' },
     workingMemory: {
       enabled: true,
+      scope: 'resource', // 个人记忆按用户(resource)持久化,跨该用户的所有会话共享
       template: [
         '# 用户档案',
         '- 学号(user_name):',
