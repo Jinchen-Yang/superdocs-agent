@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Mastra } from '@mastra/core';
 import { registerApiRoute } from '@mastra/core/server';
 import { PostgresStore } from '@mastra/pg';
@@ -10,6 +11,7 @@ export const mastra = new Mastra({
   server: {
     apiRoutes: [
       registerApiRoute('/app/models', { method: 'GET', handler: async (c) => c.json({ models: listModels() }) }),
+      registerApiRoute('/app/ui', { method: 'GET', handler: async (c) => { try { return c.html(readFileSync(process.env.UI_PATH || '', 'utf8')); } catch { return c.text('UI not found', 404); } } }),
       registerApiRoute('/app/chat', {
         method: 'POST',
         handler: async (c) => {

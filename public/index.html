@@ -1,0 +1,99 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>superdocs · AI 助手</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--glass:rgba(255,255,255,.12);--glass2:rgba(255,255,255,.18);--bd:rgba(255,255,255,.25);--txt:#f2f5ff;--muted:#b9c2e6;--accent:#7aa2ff}
+html,body{height:100%}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--txt);
+background:linear-gradient(120deg,#1a1f3c,#2a1a4a 40%,#0e2a44 80%);overflow:hidden}
+.bg{position:fixed;inset:-30%;z-index:-1;filter:blur(80px);opacity:.7}
+.bg span{position:absolute;border-radius:50%;animation:f 22s infinite ease-in-out}
+.bg span:nth-child(1){width:42vw;height:42vw;left:-5%;top:-10%;background:#5b7cff}
+.bg span:nth-child(2){width:38vw;height:38vw;right:-8%;top:10%;background:#b15bff;animation-delay:-7s}
+.bg span:nth-child(3){width:46vw;height:46vw;left:25%;bottom:-20%;background:#00b3a4;animation-delay:-14s}
+@keyframes f{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,6%) scale(1.12)}}
+.app{height:100dvh;max-width:880px;margin:0 auto;display:flex;flex-direction:column;padding:14px}
+.glass{background:var(--glass);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid var(--bd);border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;margin-bottom:12px}
+header .logo{font-size:20px;font-weight:600;letter-spacing:.5px}
+header .sub{color:var(--muted);font-size:12px}
+header select{margin-left:auto;background:var(--glass2);color:var(--txt);border:1px solid var(--bd);border-radius:12px;padding:8px 12px;font-size:13px;outline:none}
+header select option{background:#1b1f3a}
+.msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
+.msgs::-webkit-scrollbar{width:8px}.msgs::-webkit-scrollbar-thumb{background:var(--bd);border-radius:8px}
+.row{display:flex;gap:10px;max-width:86%}
+.row.user{align-self:flex-end;flex-direction:row-reverse}
+.av{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;background:var(--glass2);border:1px solid var(--bd)}
+.bub{padding:11px 14px;border-radius:16px;line-height:1.65;font-size:14.5px;background:var(--glass2);border:1px solid var(--bd);white-space:normal;word-break:break-word}
+.row.user .bub{background:linear-gradient(135deg,rgba(122,162,255,.35),rgba(177,91,255,.3))}
+.bub h3{font-size:15px;margin:8px 0 4px}.bub strong{color:#fff}.bub ul{margin:6px 0 6px 18px}.bub a{color:var(--accent)}
+.bub img{max-width:160px;border-radius:10px;margin-top:6px;display:block}
+.hint{color:var(--muted);font-size:12px;text-align:center;margin:6px 0}
+.inbar{display:flex;gap:10px;align-items:flex-end;padding:10px}
+.inbar textarea{flex:1;resize:none;max-height:140px;background:transparent;border:none;color:var(--txt);font-size:15px;outline:none;padding:8px;font-family:inherit}
+.inbar textarea::placeholder{color:var(--muted)}
+.btn{flex:0 0 auto;height:40px;min-width:40px;border-radius:14px;border:1px solid var(--bd);background:var(--glass2);color:var(--txt);font-size:17px;cursor:pointer;transition:.15s}
+.btn:hover{background:rgba(255,255,255,.28)}
+.btn.send{background:linear-gradient(135deg,#7aa2ff,#b15bff);border:none;font-weight:600;padding:0 16px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.thumb{display:flex;gap:8px;padding:0 12px 8px}
+.thumb img{width:54px;height:54px;object-fit:cover;border-radius:10px;border:1px solid var(--bd)}
+</style></head>
+<body>
+<div class="bg"><span></span><span></span><span></span></div>
+<div class="app">
+  <header class="glass">
+    <div><div class="logo">superdocs</div><div class="sub">北邮资料 AI 助手</div></div>
+    <select id="model" title="选择模型"></select>
+  </header>
+  <div class="msgs glass" id="msgs">
+    <div class="hint">问我找教材、历年试题、复习资料 —— 例如"高等数学期末试题"</div>
+  </div>
+  <div class="thumb glass" id="thumb" style="display:none"></div>
+  <div class="inbar glass">
+    <input type="file" id="file" accept="image/*" hidden multiple/>
+    <button class="btn" id="attach" title="上传图片(多模态模型)">📎</button>
+    <textarea id="ta" rows="1" placeholder="发消息…(Enter 发送,Shift+Enter 换行)"></textarea>
+    <button class="btn send" id="send">发送</button>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const thread='t-'+(crypto.randomUUID?crypto.randomUUID():Date.now());
+let images=[];
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function md(t){t=esc(t);
+ t=t.replace(/^###\s?(.+)$/gm,'<h3>$1</h3>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+ .replace(/\[(.+?)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
+ .replace(/^\s*[-*]\s+(.+)$/gm,'<li>$1</li>');
+ t=t.replace(/(<li>[\s\S]*?<\/li>)/g,m=>'<ul>'+m+'</ul>').replace(/<\/ul>\s*<ul>/g,'');
+ return t.replace(/\n/g,'<br>');}
+async function loadModels(){try{const r=await fetch('/app/models');const{models}=await r.json();
+ const sel=$('#model');sel.innerHTML=models.map(m=>`<option value="${m.id}">${m.label}${m.multimodal?' 👁':''}</option>`).join('');
+ }catch(e){$('#model').innerHTML='<option>deepseek-chat</option>'}}
+function addRow(role,html){const d=document.createElement('div');d.className='row '+role;
+ d.innerHTML=`<div class="av">${role==='user'?'🙋':'🤖'}</div><div class="bub">${html}</div>`;
+ $('#msgs').appendChild(d);$('#msgs').scrollTop=$('#msgs').scrollHeight;return d.querySelector('.bub');}
+$('#attach').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{for(const f of e.target.files){const rd=new FileReader();rd.onload=()=>{images.push(rd.result);renderThumb()};rd.readAsDataURL(f)}};
+function renderThumb(){const t=$('#thumb');if(!images.length){t.style.display='none';return}t.style.display='flex';t.innerHTML=images.map(s=>`<img src="${s}">`).join('')}
+const ta=$('#ta');ta.oninput=()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,140)+'px'};
+ta.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
+$('#send').onclick=send;
+let busy=false;
+async function send(){const text=ta.value.trim();if((!text&&!images.length)||busy)return;busy=true;$('#send').disabled=true;
+ let uhtml=md(text);images.forEach(s=>uhtml+=`<img src="${s}">`);addRow('user',uhtml);
+ const parts=[{type:'text',text:text||'(看图)'}];images.forEach(s=>parts.push({type:'image',image:s}));
+ const content=images.length?parts:text;
+ ta.value='';ta.style.height='auto';const imgs=images;images=[];renderThumb();
+ const bub=addRow('assistant','<span style="opacity:.6">思考中…</span>');let acc='';
+ try{const res=await fetch('/app/chat',{method:'POST',headers:{'content-type':'application/json'},
+   body:JSON.stringify({messages:[{role:'user',content}],model:$('#model').value,thread,resource:'web'})});
+  const rd=res.body.getReader();const dec=new TextDecoder();
+  while(true){const{done,value}=await rd.read();if(done)break;acc+=dec.decode(value,{stream:true});bub.innerHTML=md(acc);$('#msgs').scrollTop=$('#msgs').scrollHeight}
+  if(!acc.trim())bub.innerHTML='<span style="opacity:.6">(无回复,检查模型 key)</span>';
+ }catch(e){bub.innerHTML='<span style="color:#ff9">出错:'+esc(e.message)+'</span>'}
+ busy=false;$('#send').disabled=false;ta.focus();}
+loadModels();ta.focus();
+</script></body></html>
