@@ -1,7 +1,7 @@
 import MiniSearch from 'minisearch';
-import * as jieba from 'nodejs-jieba';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { cutForSearch } from '../shared/tokenize';
 
 type Rec = { id: string; url: string; type: 'book' | 'test' | 'doc'; data: any };
 const META_PATH = process.env.METADATA_PATH || join(process.cwd(), 'data/metadata.json');
@@ -26,14 +26,6 @@ function flatten(r: Rec) {
 const docs = raw.map(flatten);
 export const byId = new Map(raw.map((r) => [r.id, r]));
 export const totalDocs = docs.length;
-
-const cutForSearch = (s: string): string[] => {
-  try {
-    const fn = (jieba as any).cutForSearch || (jieba as any).cut_for_search || (jieba as any).cut;
-    const out = fn(s, true);
-    return (Array.isArray(out) ? out : [out]).filter((w: string) => w && w.trim());
-  } catch { return s.split(/\s+/).filter(Boolean); }
-};
 
 export const index = new MiniSearch({
   fields: ['title', 'course', 'college', 'authors', 'content', 'year'],
