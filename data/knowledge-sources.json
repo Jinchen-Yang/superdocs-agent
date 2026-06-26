@@ -1,0 +1,16 @@
+{
+  "builtFrom": [
+    {
+      "source": "survival-guide",
+      "repo": "byrdocs/bupt-survival-guide",
+      "commit": "5958accd9ccd90588b37d4d1e521808af0826ef2",
+      "license": "CC-BY-SA-4.0"
+    },
+    {
+      "source": "neowiki",
+      "repo": "byrdocs/byrdocs-neowiki",
+      "commit": "3bea165013f4a9f5433f9c3ce8cc76e8202e631f",
+      "license": "CC-BY-NC-SA-4.0"
+    }
+  ]
+}
