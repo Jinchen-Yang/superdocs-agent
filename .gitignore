@@ -2,5 +2,10 @@ node_modules/
 .env
 .mastra/
 dist/
+# 数据产物(由 scripts/ 预编译，随部署 rsync，不入库；保留 knowledge-sources.json 作可复现审计)
 data/metadata.json
+data/knowledge.json
+data/mirror-md5.json
+.kb-src/
 *.log
+ui.pdf
