@@ -23,13 +23,16 @@ export function Topbar({ models, model, onModel, thinking, onThinking, theme, on
   return (
     <header className="flex items-center justify-between gap-2 border-b border-black/10 px-3 py-2.5 dark:border-white/5 md:px-5 md:py-3.5">
       <div className="flex min-w-0 items-center gap-2">
-        <button onClick={onMenu} className={'grid size-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5 ' + (embed ? '' : 'md:hidden')}>
+        <button onClick={onMenu} aria-label="打开侧边菜单" className={'grid size-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5 ' + (embed ? '' : 'md:hidden')}>
           <Menu className="size-5" />
         </button>
 
         <div className="relative">
           <button
             onClick={() => setOpen((v) => !v)}
+            aria-label="切换模型"
+            aria-haspopup="listbox"
+            aria-expanded={open}
             className="flex items-center gap-2 rounded-xl border border-white/40 bg-white/50 px-3 py-2 dark:bg-white/5"
           >
             <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(34,197,94,.2)]" />
@@ -71,6 +74,8 @@ export function Topbar({ models, model, onModel, thinking, onThinking, theme, on
           <button
             onClick={onThinking}
             title="深度思考：让模型先推理再作答（DeepSeek V4）"
+            aria-label="深度思考"
+            aria-pressed={thinking}
             className="flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12.5px] font-bold transition"
             style={
               thinking
@@ -85,11 +90,11 @@ export function Topbar({ models, model, onModel, thinking, onThinking, theme, on
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <button onClick={onTheme} className="grid size-9 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5">
+        <button onClick={onTheme} aria-label={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'} className="grid size-9 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5">
           {theme === 'dark' ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
         </button>
         {embed && onClose && (
-          <button onClick={onClose} title="关闭" className="grid size-9 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5">
+          <button onClick={onClose} title="关闭" aria-label="关闭" className="grid size-9 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5">
             <X className="size-5" />
           </button>
         )}

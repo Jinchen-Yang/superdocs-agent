@@ -1,4 +1,4 @@
-import { createContext, useContext, type FC } from 'react';
+import { createContext, useContext, useRef, useState, type FC } from 'react';
 import {
   AuiIf,
   ComposerPrimitive,
@@ -7,14 +7,21 @@ import {
   useAuiState,
   type AssistantState,
 } from '@assistant-ui/react';
-import { ArrowUp, Sparkles, Square } from 'lucide-react';
+import { ArrowUp, Check, Copy, ImagePlus, Sparkles, Square, X } from 'lucide-react';
 import { MarkdownText } from './markdown-text';
+import type { Attachment } from './useChatController';
 
 const cn = (...a: (string | false | undefined)[]) => a.filter(Boolean).join(' ');
 
 // 欢迎页建议卡片通过 context 触发发送(绕开 composer 直接走 controller.send)
 const SendContext = createContext<(text: string) => void>(() => {});
 export const ChatSendProvider = SendContext.Provider;
+
+// 图片附件上下文：组合器据此显示上传按钮/预览，发送由 controller 读取附件。
+type AttachmentCtx = { attachment: Attachment | null; attach: (f: File) => void; clear: () => void };
+const AttachmentContext = createContext<AttachmentCtx>({ attachment: null, attach: () => {}, clear: () => {} });
+export const AttachmentProvider = AttachmentContext.Provider;
+const useAttachment = () => useContext(AttachmentContext);
 
 const isNewChat = (s: AssistantState) =>
   s.thread.messages.length === 0 && (!s.thread.isLoading || s.threads.isLoading);
@@ -74,50 +81,120 @@ const UserMessage: FC = () => (
   </MessagePrimitive.Root>
 );
 
-const AssistantMessage: FC = () => (
-  <MessagePrimitive.Root className="flex items-start gap-3" style={{ animation: 'msgIn .35s ease both' }}>
-    <div className="accent-grad mt-0.5 grid size-8 shrink-0 place-items-center rounded-[10px] shadow">
-      <Sparkles className="size-4 text-white" />
-    </div>
-    <div className="frost min-w-0 max-w-[88%] rounded-[6px_20px_20px_20px] px-4 py-3 text-[15px] leading-relaxed">
-      <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
-    </div>
-  </MessagePrimitive.Root>
-);
+const CopyButton: FC<{ text: string }> = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard?.writeText(text).then(
+          () => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          },
+          () => {},
+        );
+      }}
+      aria-label="复制回答"
+      className="text-faint mt-1.5 flex items-center gap-1 text-[11.5px] transition hover:text-[var(--sub)]"
+    >
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      {copied ? '已复制' : '复制'}
+    </button>
+  );
+};
+
+const AssistantMessage: FC = () => {
+  // 取本条助手消息的正文(text 分块)用于复制；reasoning/检索占位不计入。
+  const text = useAuiState((s) => {
+    const c = s.message.content as { type?: string; text?: string }[];
+    return Array.isArray(c) ? c.filter((p) => p?.type === 'text').map((p) => p?.text || '').join('') : '';
+  });
+  return (
+    <MessagePrimitive.Root className="flex items-start gap-3" style={{ animation: 'msgIn .35s ease both' }}>
+      <div className="accent-grad mt-0.5 grid size-8 shrink-0 place-items-center rounded-[10px] shadow">
+        <Sparkles className="size-4 text-white" />
+      </div>
+      <div className="frost min-w-0 max-w-[88%] rounded-[6px_20px_20px_20px] px-4 py-3 text-[15px] leading-relaxed">
+        <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
+        {text.trim() && <CopyButton text={text} />}
+      </div>
+    </MessagePrimitive.Root>
+  );
+};
 
 const Msg: FC = () => {
   const role = useAuiState((s) => s.message.role);
   return role === 'user' ? <UserMessage /> : <AssistantMessage />;
 };
 
-const Composer: FC = () => (
-  <div className="mx-auto w-full max-w-[820px] px-3 pb-3 pt-1 md:px-5 md:pb-4">
-    <ComposerPrimitive.Root className="glass flex items-end gap-2 rounded-3xl py-2 pl-3.5 pr-2">
-      <ComposerPrimitive.Input
-        rows={1}
-        // 仅桌面(精确指针 + 宽屏)自动聚焦；移动端别一进来就弹键盘遮住欢迎页。
-        autoFocus={typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches && window.innerWidth > 760}
-        placeholder="给 superdocs 发送消息…"
-        className="max-h-36 min-h-6 flex-1 resize-none bg-transparent py-2 text-[15px] leading-normal outline-none placeholder:text-[var(--faint)]"
-      />
-      <AuiIf condition={(s) => !s.thread.isRunning}>
-        <ComposerPrimitive.Send asChild>
-          <button className="accent-grad grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-md transition-transform hover:scale-105 disabled:opacity-40">
-            <ArrowUp className="size-5" />
-          </button>
-        </ComposerPrimitive.Send>
-      </AuiIf>
-      <AuiIf condition={(s) => s.thread.isRunning}>
-        <ComposerPrimitive.Cancel asChild>
-          <button className="accent-grad grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-md">
-            <Square className="size-3.5 fill-current" />
-          </button>
-        </ComposerPrimitive.Cancel>
-      </AuiIf>
-    </ComposerPrimitive.Root>
-    <div className="text-faint mt-2 text-center text-[11.5px]">superdocs 可能出错，资料请以原站为准。</div>
-  </div>
-);
+const Composer: FC = () => {
+  const { attachment, attach, clear } = useAttachment();
+  const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="mx-auto w-full max-w-[820px] px-3 pb-3 pt-1 md:px-5 md:pb-4">
+      {attachment && (
+        <div className="mb-2 flex items-center gap-2 px-1">
+          <div className="relative">
+            <img src={attachment.dataUrl} alt={attachment.name} className="size-16 rounded-xl border border-white/30 object-cover" />
+            <button
+              onClick={clear}
+              aria-label="移除图片"
+              className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-rose-500 text-white shadow"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+          <span className="text-faint text-[12px]">已自动切换多模态模型识别图片</span>
+        </div>
+      )}
+      <ComposerPrimitive.Root className="glass flex items-end gap-1.5 rounded-3xl py-2 pl-2 pr-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) attach(f);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          aria-label="上传图片"
+          title="上传图片（自动切换多模态模型）"
+          className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--sub)] transition hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          <ImagePlus className="size-5" />
+        </button>
+        <ComposerPrimitive.Input
+          rows={1}
+          // 仅桌面(精确指针 + 宽屏)自动聚焦；移动端别一进来就弹键盘遮住欢迎页。
+          autoFocus={typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches && window.innerWidth > 760}
+          placeholder="给 superdocs 发送消息…"
+          // 16px 字号：去掉禁缩放后避免 iOS 聚焦自动放大。
+          className="max-h-36 min-h-6 flex-1 resize-none bg-transparent py-2 text-base leading-normal outline-none placeholder:text-[var(--faint)]"
+        />
+        <AuiIf condition={(s) => !s.thread.isRunning}>
+          <ComposerPrimitive.Send asChild>
+            <button aria-label="发送" className="accent-grad grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-md transition-transform hover:scale-105 disabled:opacity-40">
+              <ArrowUp className="size-5" />
+            </button>
+          </ComposerPrimitive.Send>
+        </AuiIf>
+        <AuiIf condition={(s) => s.thread.isRunning}>
+          <ComposerPrimitive.Cancel asChild>
+            <button aria-label="停止生成" className="accent-grad grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-md">
+              <Square className="size-3.5 fill-current" />
+            </button>
+          </ComposerPrimitive.Cancel>
+        </AuiIf>
+      </ComposerPrimitive.Root>
+      <div className="text-faint mt-2 text-center text-[11.5px]">superdocs 可能出错，资料请以原站为准。</div>
+    </div>
+  );
+};
 
 export const Thread: FC = () => {
   const empty = useAuiState(isNewChat);
