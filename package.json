@@ -16,6 +16,7 @@
   "dependencies": {
     "@ai-sdk/deepseek": "^2.0.39",
     "@ai-sdk/openai-compatible": "^2.0.51",
+    "@byrdocs/bupt-auth": "npm:@jsr/byrdocs__bupt-auth@^0.2.1",
     "@mastra/core": "^1.46.0",
     "@mastra/fastembed": "^1.2.0",
     "@mastra/memory": "^1.21.1",
