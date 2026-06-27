@@ -58,7 +58,7 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
     <div className="group relative flex items-center">
       <button
         onClick={onSelect}
-        className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition ${active ? 'frost' : 'hover:bg-white/40 dark:hover:bg-white/5'}`}
+        className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-2 pl-2.5 pr-9 text-left transition ${active ? 'frost' : 'hover:bg-white/40 dark:hover:bg-white/5'}`}
       >
         <span className={`grid size-6 shrink-0 place-items-center rounded-lg text-[11px] font-bold ${active ? 'accent-grad text-white' : 'text-sub bg-black/5 dark:bg-white/10'}`}>
           {(c.title || '·').slice(0, 1)}
@@ -70,7 +70,7 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
           e.stopPropagation();
           setMenu((v) => !v);
         }}
-        className="text-faint absolute right-1 grid size-7 place-items-center rounded-lg opacity-0 transition group-hover:opacity-100"
+        className="text-faint absolute right-1 grid size-7 place-items-center rounded-lg opacity-100 transition md:opacity-0 md:group-hover:opacity-100"
       >
         <MoreHorizontal className="size-4" />
       </button>
@@ -124,7 +124,15 @@ export function Sidebar({ conversations, activeId, user, onSelect, onNew, onRena
     );
 
   return (
-    <aside className="frost flex h-full w-[272px] shrink-0 flex-col gap-2 rounded-none p-3.5 md:rounded-3xl">
+    <aside
+      className="frost flex h-full w-[272px] shrink-0 flex-col gap-2 rounded-none p-3.5 md:rounded-3xl"
+      style={{
+        // 移动抽屉占满左侧到屏幕边缘，避开安全区；桌面端 env(...) = 0，等同 p-3.5。
+        paddingTop: 'calc(0.875rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(0.875rem + env(safe-area-inset-bottom))',
+        paddingLeft: 'calc(0.875rem + env(safe-area-inset-left))',
+      }}
+    >
       <div className="flex items-center gap-2.5 px-1.5 pb-2 pt-1">
         <div className="accent-grad grid size-8 place-items-center rounded-[9px] shadow">
           <Sparkles className="size-4 text-white" />

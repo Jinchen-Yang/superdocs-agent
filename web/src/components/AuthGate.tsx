@@ -44,7 +44,14 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
     'w-full rounded-xl border border-white/40 bg-white/60 px-3.5 py-3 text-[14.5px] outline-none dark:bg-white/5';
 
   return (
-    <div className="grid h-full place-items-center p-6" style={{ paddingBottom: 'calc(1.5rem + var(--kb, 0px))', transition: 'padding-bottom .18s ease' }}>
+    <div
+      className="grid h-full place-items-center p-6"
+      style={{
+        paddingTop: 'calc(1.5rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1.5rem + max(env(safe-area-inset-bottom), var(--kb, 0px)))',
+        transition: 'padding-bottom .18s ease',
+      }}
+    >
       <div className="glass flex w-full max-w-[380px] flex-col gap-3 rounded-3xl px-7 py-8 text-center" style={{ animation: 'riseIn .5s ease both' }}>
         <div className="accent-grad mx-auto grid size-14 place-items-center rounded-2xl shadow-lg">
           <Sparkles className="size-7 text-white" />
