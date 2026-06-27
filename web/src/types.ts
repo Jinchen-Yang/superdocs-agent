@@ -4,6 +4,15 @@ export type User = {
   displayName: string;
   avatarSeed: string;
   provider: string;
+  isAdmin?: boolean;
+};
+
+export type AdminStats = {
+  users: { total: number; bound: number; active: number };
+  tokens: { total: number; input: number; output: number; calls: number };
+  today: { total: number; calls: number };
+  byModel: { model: string; tokens: number; calls: number }[];
+  topUsers: { name: string; sid: string; tokens: number; calls: number }[];
 };
 
 export type ModelMeta = {

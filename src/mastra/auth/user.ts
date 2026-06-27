@@ -1,6 +1,7 @@
 import { query } from '../db/pool';
 import { ensureSchema } from '../db/schema';
 import { readUserId } from './session';
+import { isAdmin } from './admin';
 
 export interface AppUser {
   id: string;
@@ -37,5 +38,6 @@ export function publicUser(u: AppUser) {
     displayName: name,
     avatarSeed: (u.avatar_seed || name || '?').slice(0, 1).toUpperCase(),
     provider: u.auth_provider,
+    isAdmin: isAdmin(u),
   };
 }

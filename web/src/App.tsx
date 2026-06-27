@@ -5,6 +5,7 @@ import { AuthGate } from './components/AuthGate';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { AccountModal } from './components/AccountModal';
+import { AdminModal } from './components/AdminModal';
 import { ChatSendProvider, Thread } from './chat/Thread';
 import { useChatController } from './chat/useChatController';
 import { api } from './api';
@@ -21,6 +22,7 @@ export function App() {
   const [mobile, setMobile] = useState(() => window.innerWidth <= 760);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const modelRef = useRef(model);
   modelRef.current = model;
@@ -174,7 +176,15 @@ export function App() {
           </div>
         </main>
       </div>
-      {showAccount && <AccountModal user={user} onClose={() => setShowAccount(false)} onLogout={logout} />}
+      {showAccount && (
+        <AccountModal
+          user={user}
+          onClose={() => setShowAccount(false)}
+          onLogout={logout}
+          onOpenAdmin={() => { setShowAccount(false); setShowAdmin(true); }}
+        />
+      )}
+      {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
     </>
   );
 }

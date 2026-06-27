@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chat';
 import { conversationRoutes } from './routes/conversations';
 import { profileRoutes } from './routes/profile';
+import { adminRoutes } from './routes/admin';
 
 // 前端(Vite+React+assistant-ui)构建产物目录（部署时可用 NEXT_DIR 覆盖）。
 const NEXT_DIR = process.env.NEXT_DIR || join(process.cwd(), 'web/dist');
@@ -43,6 +44,7 @@ export const mastra = new Mastra({
       ...chatRoutes,
       ...conversationRoutes,
       ...profileRoutes,
+      ...adminRoutes,
     ],
   },
 });
