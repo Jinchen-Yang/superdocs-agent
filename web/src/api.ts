@@ -32,7 +32,7 @@ export const api = {
   embed: (token: string) => j<{ user: User }>('/app/auth/embed', jsonPost({ token })),
   whoami: (): Promise<{ ip: string; campus: boolean; gate: boolean; cidrs: number } | null> =>
     j<{ ip: string; campus: boolean; gate: boolean; cidrs: number }>('/app/auth/whoami').catch(() => null),
-  logout: () => fetch('/app/auth/logout', { method: 'POST' }).catch(() => {}),
+  logout: () => fetch('/app/auth/logout', jsonPost({})).catch(() => {}),
   models: () => j<{ models: ModelMeta[] }>('/app/models'),
   conversations: () => j<{ conversations: Conversation[] }>('/app/conversations'),
   renameConversation: (id: string, title: string) =>
