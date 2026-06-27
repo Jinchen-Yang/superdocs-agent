@@ -15,8 +15,10 @@ const SECRET = ENV_SECRET || 'dev-insecure-session-secret-change-me';
 
 const COOKIE = 'sd_session';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 天
-// 生产经 HTTPS 暴露，给 cookie 加 Secure，防明文链路嗅探。
-const SECURE = IS_PROD ? '; Secure' : '';
+// 生产：SameSite=None; Secure; Partitioned —— 让会话在第三方 iframe(内嵌气泡)里也能用，
+// 且按宿主站分区(CHIPS)隔离。跨站 CSRF 由"仅接受 application/json + 无通配 CORS"兜底。
+// 开发(无 HTTPS)回落 SameSite=Lax。
+const COOKIE_ATTRS = IS_PROD ? '; Secure; SameSite=None; Partitioned' : '; SameSite=Lax';
 
 function sign(payload: string): string {
   return createHmac('sha256', SECRET).update(payload).digest('base64url');
@@ -41,13 +43,13 @@ function verifyToken(token: string): string | null {
 }
 
 export function issueSession(c: any, userId: string): void {
-  c.header('Set-Cookie', `${COOKIE}=${makeToken(userId)}; Path=/; HttpOnly; SameSite=Lax${SECURE}; Max-Age=${MAX_AGE}`, {
+  c.header('Set-Cookie', `${COOKIE}=${makeToken(userId)}; Path=/; HttpOnly${COOKIE_ATTRS}; Max-Age=${MAX_AGE}`, {
     append: true,
   });
 }
 
 export function clearSession(c: any): void {
-  c.header('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax${SECURE}; Max-Age=0`, { append: true });
+  c.header('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly${COOKIE_ATTRS}; Max-Age=0`, { append: true });
 }
 
 export function readUserId(c: any): string | null {

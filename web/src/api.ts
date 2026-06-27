@@ -29,6 +29,7 @@ export const api = {
   register: (b: { username: string; password: string; studentId: string; ssoPassword: string }) =>
     j<{ user: User }>('/app/auth/register', jsonPost(b)),
   sso: (b: { studentId: string; password: string }) => j<{ user: User }>('/app/auth/sso', jsonPost(b)),
+  embed: (token: string) => j<{ user: User }>('/app/auth/embed', jsonPost({ token })),
   whoami: (): Promise<{ ip: string; campus: boolean; gate: boolean; cidrs: number } | null> =>
     j<{ ip: string; campus: boolean; gate: boolean; cidrs: number }>('/app/auth/whoami').catch(() => null),
   logout: () => fetch('/app/auth/logout', { method: 'POST' }).catch(() => {}),
