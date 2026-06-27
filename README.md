@@ -10,7 +10,7 @@
 
 知识库答疑。摄入了北邮生存指南和真题 wiki,切成三百多个知识块。校园生活和真题类的问题直接从知识库里答,并标出处。
 
-多模型。DeepSeek V4、智谱 GLM、通义千问都接了,支持多模态和深度思考开关。模型集中在一处注册,增删改动一个文件就行。
+多模型。接了 DeepSeek V4(支持深度思考开关)和小米 MiMo(含多模态 Omni)。平时默认 DeepSeek;在输入框上传图片时自动切到多模态模型识别,发完切回。模型集中在一处注册,增删改动一个文件就行。
 
 账号与登录。本地账号用用户名密码(密码走 scrypt),也支持北邮统一认证(基于 bupt-auth)。本地账号必须绑定到统一认证的学号,一个学号对应一个账号;绑定之后,本地密码和统一认证两种方式都能登进同一个账号。会话用签名 cookie,服务端无状态。对话历史、个人记忆、token 用量都存库。
 
@@ -66,7 +66,7 @@ npm run dev                          # vite,API 代理到 3100;或 npm run build
 | 变量 | 说明 |
 |---|---|
 | `DATABASE_URL` | Postgres 连接串,库要装 pgvector |
-| `DEEPSEEK_API_KEY` / `ZHIPU_API_KEY` / `QWEN_API_KEY` | 模型 key,按需填,缺哪个对应模型就不可用 |
+| `DEEPSEEK_API_KEY` / `MIMO_API_KEY` | 模型 key,按需填,缺哪个对应模型就不可用(MiMo 为 OpenAI 兼容,按月 credits 计费) |
 | `APP_SESSION_SECRET` | 会话签名密钥,生产必填(`openssl rand -hex 32`) |
 | `NODE_ENV` | 设为 `production` 时启用 Secure cookie 并强制校验 SECRET |
 | `PORT` | 端口,默认 3100 |
@@ -84,6 +84,8 @@ cd web && npm run build      # vite build,产物在 web/dist
 # 运行: NODE_ENV=production node .mastra/output/index.mjs
 # nginx 把 /app/ 反代到 3100,就能挂在任意站点的子路径下
 ```
+
+反代要点:应用默认**不信任** `X-Forwarded-For`(可伪造),否则校园门禁/限流会被绕过。nginx 需 `proxy_set_header X-Real-IP $remote_addr;`(应用据此取真实 IP);若反代只透传 XFF,则给应用设 `TRUSTED_PROXY_HOPS=1`。上线前用 `/app/auth/whoami` 确认返回的 `ip` 不是 `unknown`。健康检查走 `GET /app/health`(DB 不通返回 503)。
 
 ## 数据来源
 
