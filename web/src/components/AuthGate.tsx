@@ -38,10 +38,13 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
   const submitLocal = () => {
     const username = form.username.trim();
     if (username.length < 2) return setError('用户名至少 2 个字符');
-    if (form.password.length < 8) return setError('密码至少 8 位');
+    if (form.password.length < 8) return setError('本地密码至少 8 位');
+    if (isRegister && (!form.studentId.trim() || !form.ssoPassword)) {
+      return setError('注册需填学号和统一认证密码以绑定');
+    }
     run(() =>
       isRegister
-        ? api.register({ username, password: form.password, displayName: form.displayName.trim() })
+        ? api.register({ username, password: form.password, studentId: form.studentId.trim(), ssoPassword: form.ssoPassword })
         : api.login({ username, password: form.password }),
     );
   };
@@ -109,10 +112,14 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
         ) : (
           <>
             <input className={inputCls} placeholder="用户名" value={form.username} onChange={set('username')} onKeyDown={onKey} />
+            <input className={inputCls} type="password" placeholder="本地密码（至少 8 位）" value={form.password} onChange={set('password')} onKeyDown={onKey} />
             {isRegister && (
-              <input className={inputCls} placeholder="昵称（可选）" value={form.displayName} onChange={set('displayName')} onKeyDown={onKey} />
+              <>
+                <input className={inputCls} placeholder="学号（绑定统一认证）" value={form.studentId} onChange={set('studentId')} onKeyDown={onKey} />
+                <input className={inputCls} type="password" placeholder="统一认证密码（仅验证身份，不存储）" value={form.ssoPassword} onChange={set('ssoPassword')} onKeyDown={onKey} />
+                <p className="text-faint -mt-1 text-[11.5px] leading-relaxed">注册需用北邮统一认证验证身份并绑定；绑定后本地密码或统一认证两种方式都能登录。</p>
+              </>
             )}
-            <input className={inputCls} type="password" placeholder="密码（至少 8 位）" value={form.password} onChange={set('password')} onKeyDown={onKey} />
           </>
         )}
 

@@ -26,7 +26,7 @@ const jsonPost = (body: unknown): RequestInit => ({
 export const api = {
   me: () => j<{ user: User }>('/app/auth/me'),
   login: (b: { username: string; password: string }) => j<{ user: User }>('/app/auth/login', jsonPost(b)),
-  register: (b: { username: string; password: string; displayName?: string }) =>
+  register: (b: { username: string; password: string; studentId: string; ssoPassword: string }) =>
     j<{ user: User }>('/app/auth/register', jsonPost(b)),
   sso: (b: { studentId: string; password: string }) => j<{ user: User }>('/app/auth/sso', jsonPost(b)),
   whoami: (): Promise<{ ip: string; campus: boolean; gate: boolean; cidrs: number } | null> =>
