@@ -135,8 +135,6 @@ export function App() {
     <>
       <Background />
       <div className="relative flex h-full p-0 md:gap-3 md:p-3">
-        {!embed && (
-        <>
         <div
           className={
             mobile
@@ -159,8 +157,6 @@ export function App() {
           />
         </div>
         {mobile && sidebarOpen && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
-        </>
-        )}
 
         <main
           className="frost relative flex min-w-0 flex-1 flex-col overflow-hidden md:rounded-3xl"
@@ -185,7 +181,6 @@ export function App() {
             onTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
             onMenu={() => setSidebarOpen(true)}
             embed={embed}
-            onNew={onNewChat}
             onClose={() => { try { window.parent.postMessage({ type: 'sd-embed-close' }, '*'); } catch { /* noop */ } }}
           />
           <div className="min-h-0 flex-1">
