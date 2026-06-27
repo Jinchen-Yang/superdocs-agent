@@ -17,8 +17,11 @@ export const memory = new Memory({
   vector: memVector,
   embedder: fastembed,
   options: {
-    lastMessages: 20,
-    semanticRecall: { topK: 3, messageRange: 2, scope: 'resource' },
+    // token 优化(v1.0.2)：历史是每次调用 input 的大头(实测均 ~17.5k input/次，input:output≈17:1)。
+    // lastMessages 20→8 + semanticRecall topK 3→2 / range 2→1，显著压缩每次重发的上下文体积，
+    // 且 semanticRecall 每次少算一些 embedding。知识块本体的精简见 get_knowledge 截断 / 后续 RAG。
+    lastMessages: 8,
+    semanticRecall: { topK: 2, messageRange: 1, scope: 'resource' },
     workingMemory: {
       enabled: true,
       scope: 'resource', // 个人记忆按用户(resource)持久化,跨该用户的所有会话共享
