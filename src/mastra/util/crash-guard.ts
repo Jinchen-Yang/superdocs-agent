@@ -28,7 +28,9 @@ export function installCrashGuard(): void {
     process.exit(1);
   });
   process.on('unhandledRejection', (e: any) => {
-    // 服务器不因一条游离的 rejection 整体退出；连接类的更要保活，其余仅记录以便排查。
+    // 与 uncaughtException 有意不对称：uncaughtException 后进程状态存疑，故非连接错误 fail-fast 退出；
+    // 而游离的 rejection 通常只波及单个请求、进程整体仍健康。本服务未必跑在 supervisor 下
+    // （可能是裸 `node`），宁可记录并保活也不因一条 rejection 把服务整体打死。真问题靠日志排查。
     log.error('未处理的 Promise 拒绝(已记录，进程保活)', { err: e?.message || String(e), code: e?.code });
   });
 }

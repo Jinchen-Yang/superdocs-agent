@@ -28,5 +28,11 @@ export function withDeadline<T>(p: Promise<T>, ms: number, label: string): Promi
   const timeout = new Promise<T>((_, reject) => {
     timer = setTimeout(() => reject(new Error(`${label}超时(${ms}ms)`)), ms);
   });
+  // 给 p 单独挂一个 no-op handler：即便它输掉竞速、其后续 reject 也已"被处理"，
+  // 不会冒泡成 unhandledRejection（否则慢 DB/慢上游在超时后才 reject 会产生噪音）。
+  p.then(
+    () => {},
+    () => {},
+  );
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
