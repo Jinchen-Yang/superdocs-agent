@@ -1,11 +1,11 @@
 import { registerApiRoute } from '@mastra/core/server';
 import { ensureSchema } from '../db/schema';
-import { issueSession, clearSession } from '../auth/session';
+import { issueSession, clearSession, readSession } from '../auth/session';
 import { buptSsoVerify, findOrCreateSsoUser, localVerify, bindLocalCredentials } from '../auth/provider';
 import { verifyEmbedToken } from '../auth/embed';
-import { getUserById, publicUser } from '../auth/user';
+import { getUserById, publicUser, bumpSessionEpoch } from '../auth/user';
 import { authed } from '../auth/guard';
-import { rateLimit, clientIp } from '../auth/ratelimit';
+import { rateLimit, clearRateLimit, clientIp } from '../auth/ratelimit';
 import { campus } from '../auth/campus';
 
 // 把 SSO 异常映射为用户可读提示。
@@ -35,6 +35,10 @@ export const authRoutes = [
       if (username.length < 2) return c.json({ error: '用户名至少 2 个字符' }, 400);
       if (password.length < 8) return c.json({ error: '本地密码至少 8 位' }, 400);
       if (!studentId || !ssoPassword) return c.json({ error: '请填写学号和统一认证密码以绑定' }, 400);
+      // 账号维度限流：防 IP 轮换下针对单个学号反复试统一认证密码。
+      if (!rateLimit(`register-acct:${studentId}`, 5, 10 * 60_000)) {
+        return c.json({ error: '该学号尝试过于频繁，请稍后再试' }, 429);
+      }
 
       let identity: { studentId: string; realName: string };
       try {
@@ -44,9 +48,10 @@ export const authRoutes = [
       }
       const r = await bindLocalCredentials(identity.studentId, identity.realName, username, password);
       if ('error' in r) return c.json({ error: r.error }, 409);
-      issueSession(c, r.userId);
       const u = await getUserById(r.userId);
-      return c.json({ user: u ? publicUser(u) : null });
+      if (!u) return c.json({ error: '账号创建异常，请重试' }, 500);
+      issueSession(c, u.id, u.session_epoch);
+      return c.json({ user: publicUser(u) });
     },
   }),
 
@@ -62,11 +67,18 @@ export const authRoutes = [
       try { body = await c.req.json(); } catch { return c.json({ error: '请求体需为 JSON' }, 400); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
+      // 账号维度限流：防分布式/换 IP 撞单个账号的库。
+      if (username && !rateLimit(`login-acct:${username.toLowerCase()}`, 10, 5 * 60_000)) {
+        return c.json({ error: '该账号尝试过于频繁，请稍后再试' }, 429);
+      }
       const id = await localVerify(username, password);
       if (!id) return c.json({ error: '用户名或密码错误（或该账号尚未绑定统一认证）' }, 401);
-      issueSession(c, id);
       const u = await getUserById(id);
-      return c.json({ user: u ? publicUser(u) : null });
+      if (!u) return c.json({ error: '登录异常，请重试' }, 500);
+      // 登录成功即清账号桶，避免合法用户被自己之前的输错次数拖累。
+      clearRateLimit(`login-acct:${username.toLowerCase()}`);
+      issueSession(c, u.id, u.session_epoch);
+      return c.json({ user: publicUser(u) });
     },
   }),
 
@@ -83,12 +95,17 @@ export const authRoutes = [
       const studentId = String(body?.studentId || '').trim();
       const password = String(body?.password || '');
       if (!studentId || !password) return c.json({ error: '请填写学号和密码' }, 400);
+      if (!rateLimit(`sso-acct:${studentId}`, 10, 5 * 60_000)) {
+        return c.json({ error: '该学号尝试过于频繁，请稍后再试' }, 429);
+      }
       try {
         const identity = await buptSsoVerify(studentId, password);
         const id = await findOrCreateSsoUser(identity.studentId, identity.realName);
-        issueSession(c, id);
         const u = await getUserById(id);
-        return c.json({ user: u ? publicUser(u) : null });
+        if (!u) return c.json({ error: '登录异常，请重试' }, 500);
+        clearRateLimit(`sso-acct:${studentId}`);
+        issueSession(c, u.id, u.session_epoch);
+        return c.json({ user: publicUser(u) });
       } catch (e: any) {
         return c.json({ error: ssoErrMsg(e) }, 401);
       }
@@ -106,15 +123,26 @@ export const authRoutes = [
       const id = verifyEmbedToken(String(body?.token || ''));
       if (!id) return c.json({ error: '内嵌令牌无效或未启用' }, 401);
       const userId = await findOrCreateSsoUser(id.studentId, id.realName);
-      issueSession(c, userId);
       const u = await getUserById(userId);
-      return c.json({ user: u ? publicUser(u) : null });
+      if (!u) return c.json({ error: '登录异常，请重试' }, 500);
+      issueSession(c, u.id, u.session_epoch);
+      return c.json({ user: publicUser(u) });
     },
   }),
 
+  // 登出：吊销纪元(让此前所有 token 失效) + 清 cookie。两步独立，纪元失败也仍清 cookie。
   registerApiRoute('/app/auth/logout', {
     method: 'POST',
-    handler: async (c) => { clearSession(c); return c.json({ ok: true }); },
+    handler: async (c) => {
+      // CSRF 兜底：登出会吊销该用户「全部设备」的会话(纪元+1)，要求 application/json——
+      // 跨站表单无法设此 content-type，跨站 fetch 设它会触发被拦的 CORS 预检，从而挡住"跨站强制登出"。
+      const ct = c.req.header('content-type') || '';
+      if (!ct.includes('application/json')) return c.json({ error: '请求需为 application/json' }, 415);
+      const s = readSession(c);
+      if (s) await bumpSessionEpoch(s.userId).catch(() => {});
+      clearSession(c);
+      return c.json({ ok: true });
+    },
   }),
 
   registerApiRoute('/app/auth/me', {

@@ -17,6 +17,10 @@ async function doEnsure(): Promise<void> {
   // 用户名大小写不敏感唯一（不依赖 citext 扩展）
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS app_user_username_lower_idx ON app_user (lower(username))`);
 
+  // 会话纪元：嵌进无状态 token，改密/登出时 +1 即可让该用户此前签发的所有 token 立即失效
+  // （无状态 token 本无吊销能力，靠这一计数实现「服务端可吊销」）。对老表补列。
+  await query(`ALTER TABLE app_user ADD COLUMN IF NOT EXISTS session_epoch integer NOT NULL DEFAULT 0`);
+
   await query(`CREATE TABLE IF NOT EXISTS app_usage (
     id            bigserial PRIMARY KEY,
     user_id       text NOT NULL,

@@ -9,10 +9,14 @@ declare module 'pg' {
     max?: number;
     idleTimeoutMillis?: number;
     connectionTimeoutMillis?: number;
+    keepAlive?: boolean;
+    statement_timeout?: number;
   }
   export class Pool {
     constructor(config?: PoolConfig);
     query<R = any>(text: string, params?: any[]): Promise<QueryResult<R>>;
+    on(event: 'error', listener: (err: Error) => void): this;
+    on(event: string, listener: (...args: any[]) => void): this;
     end(): Promise<void>;
   }
 }

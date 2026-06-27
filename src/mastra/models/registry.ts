@@ -1,5 +1,9 @@
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { withTimeout } from '../util/fetch';
+
+// 上游若一直不返回响应头则在此超时(默认 30s)；一旦开始返回(流式补全)即不再约束，正常长流不受影响。
+const llmFetch = withTimeout(Number(process.env.LLM_TIMEOUT_MS) || 30_000);
 
 export type Provider = 'deepseek' | 'zhipu' | 'qwen';
 export type ModelMeta = {
@@ -30,9 +34,9 @@ for (const [p, k] of Object.entries(providerKeys)) {
 }
 
 const providers = {
-  deepseek: createDeepSeek({ apiKey: providerKeys.deepseek ?? '' }),
-  zhipu: createOpenAICompatible({ name: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', apiKey: providerKeys.zhipu ?? '' }),
-  qwen: createOpenAICompatible({ name: 'qwen', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: providerKeys.qwen ?? '' }),
+  deepseek: createDeepSeek({ apiKey: providerKeys.deepseek ?? '', fetch: llmFetch }),
+  zhipu: createOpenAICompatible({ name: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', apiKey: providerKeys.zhipu ?? '', fetch: llmFetch }),
+  qwen: createOpenAICompatible({ name: 'qwen', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: providerKeys.qwen ?? '', fetch: llmFetch }),
 } as const;
 
 export const DEFAULT_MODEL = 'deepseek-v4-flash';

@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { login as buptLogin } from '@byrdocs/bupt-auth';
 import { query } from '../db/pool';
 import { hashPassword, verifyPassword } from './password';
+import { withTimeout, withDeadline } from '../util/fetch';
+
+const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 10_000;
+const SSO_TIMEOUT_MS = Number(process.env.SSO_TIMEOUT_MS) || 20_000;
+const tfetch = withTimeout(OCR_TIMEOUT_MS);
 
 // 账号模型：一账号一学号(external_id)，全部经北邮统一认证(SSO)绑定。
 // - 注册 = 把本地用户名/密码绑定到已 SSO 验证的学号账号；
@@ -12,9 +17,11 @@ const OCR_URL = process.env.OCR_URL || '';
 
 async function ocrCaptcha(captchaUrl: string, cookie: string): Promise<string> {
   if (!OCR_URL) throw new Error('需要验证码');
-  const img = await fetch(captchaUrl, { headers: { cookie } });
+  const img = await tfetch(captchaUrl, { headers: { cookie } });
+  if (!img.ok) throw new Error('验证码图片获取失败');
   const buf = Buffer.from(await img.arrayBuffer());
-  const r = await fetch(OCR_URL, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: buf });
+  const r = await tfetch(OCR_URL, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: buf });
+  if (!r.ok) throw new Error('验证码识别服务异常'); // 先判 ok 再 .json()，避免对非 2xx 响应解析出错。
   const j = (await r.json()) as { text?: string };
   if (!j?.text) throw new Error('验证码识别失败');
   return j.text;
@@ -27,7 +34,8 @@ export async function buptSsoVerify(studentId: string, password: string): Promis
   let lastErr: any;
   for (let i = 0; i < 3; i++) {
     try {
-      info = await buptLogin(studentId, password, opts);
+      // buptLogin 不暴露可注入的 fetch，用 withDeadline 限制单次等待，避免上游 hang 把整轮重试拖死。
+      info = await withDeadline(buptLogin(studentId, password, opts), SSO_TIMEOUT_MS, '统一认证');
       break;
     } catch (e: any) {
       lastErr = e;
@@ -91,9 +99,11 @@ export async function bindLocalCredentials(
   const hash = hashPassword(password);
   const avatar = (realName || '?').slice(0, 1).toUpperCase();
   if (existing[0]) {
-    await query('UPDATE app_user SET username = $2, password_hash = $3, display_name = $4, avatar_seed = $5 WHERE id = $1', [
-      existing[0].id, username, hash, realName, avatar,
-    ]);
+    // 重绑/重设本地密码 = 凭据变更，纪元 +1 让该账号此前签发的所有 token 立即失效。
+    await query(
+      'UPDATE app_user SET username = $2, password_hash = $3, display_name = $4, avatar_seed = $5, session_epoch = session_epoch + 1 WHERE id = $1',
+      [existing[0].id, username, hash, realName, avatar],
+    );
     return { userId: existing[0].id };
   }
   const id = randomUUID();

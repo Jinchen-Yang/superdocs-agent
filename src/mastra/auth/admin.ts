@@ -1,7 +1,8 @@
 import type { AppUser } from './user';
 
-// 管理员名单：ADMIN_IDS=逗号分隔的 学号(external_id) 或 用户名(username)。
-// 仅名单内账号能看管理统计页。
+// 管理员名单：ADMIN_IDS=逗号分隔的「学号(external_id)」。
+// 只认学号——绝不认 username：username 是注册时用户自选的任意字符串，
+// 若拿它判权限，任何有北邮 SSO 账号的人都能抢注某用户名直接提权。
 const ADMINS = (process.env.ADMIN_IDS || '')
   .split(',')
   .map((s) => s.trim().toLowerCase())
@@ -9,8 +10,6 @@ const ADMINS = (process.env.ADMIN_IDS || '')
 
 export function isAdmin(u: AppUser | null | undefined): boolean {
   if (!u || ADMINS.length === 0) return false;
-  return (
-    (u.external_id != null && ADMINS.includes(u.external_id.toLowerCase())) ||
-    (u.username != null && ADMINS.includes(u.username.toLowerCase()))
-  );
+  // 仅按学号判定。external_id 由北邮统一认证回填、用户不可自改。
+  return u.external_id != null && ADMINS.includes(u.external_id.toLowerCase());
 }

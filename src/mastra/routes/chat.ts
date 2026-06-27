@@ -5,6 +5,7 @@ import { resolveModel, MODELS, DEFAULT_MODEL, thinkingProviderOptions } from '..
 import { memory } from '../memory/memory';
 import { authed } from '../auth/guard';
 import { query } from '../db/pool';
+import { log } from '../util/log';
 
 const mem = memory as any;
 
@@ -43,7 +44,10 @@ async function recordUsage(result: any, userId: string, threadId: string, model:
       'INSERT INTO app_usage (user_id, thread_id, model, input_tokens, output_tokens) VALUES ($1,$2,$3,$4,$5)',
       [userId, threadId, model, input, output],
     );
-  } catch { /* ignore */ }
+  } catch (e: any) {
+    // 用量入库失败不影响对话，但不再完全静默——记一条，避免计费/统计数据悄悄缺失。
+    log.warn('token 用量记录失败', { err: e?.message || String(e), userId, model });
+  }
 }
 
 // 从一个 fullStream part 里取出增量文本（兼容 text / textDelta / delta / payload.text 等形态）。
@@ -82,7 +86,14 @@ export const chatRoutes = [
 
       const streamOpts: any = { model: resolved, memory: { resource, thread: threadId } };
       if (providerOptions) streamOpts.providerOptions = providerOptions;
-      const result: any = await docsAgent.stream(messages, streamOpts);
+      // 流初始化阶段(建连/鉴权/超时)抛错时给结构化 502，而非裸 500；细节只进日志不回显，避免泄露内部拓扑。
+      let result: any;
+      try {
+        result = await docsAgent.stream(messages, streamOpts);
+      } catch (e: any) {
+        log.error('docsAgent.stream 初始化失败', { err: e?.message || String(e), model: modelId, userId: user.id });
+        return c.json({ error: '对话服务暂时不可用，请稍后重试' }, 502);
+      }
 
       void recordUsage(result, user.id, threadId, modelId);
 
