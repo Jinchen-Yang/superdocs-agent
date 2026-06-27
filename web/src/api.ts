@@ -28,6 +28,9 @@ export const api = {
   login: (b: { username: string; password: string }) => j<{ user: User }>('/app/auth/login', jsonPost(b)),
   register: (b: { username: string; password: string; displayName?: string }) =>
     j<{ user: User }>('/app/auth/register', jsonPost(b)),
+  sso: (b: { studentId: string; password: string }) => j<{ user: User }>('/app/auth/sso', jsonPost(b)),
+  whoami: (): Promise<{ ip: string; campus: boolean; gate: boolean; cidrs: number } | null> =>
+    j<{ ip: string; campus: boolean; gate: boolean; cidrs: number }>('/app/auth/whoami').catch(() => null),
   logout: () => fetch('/app/auth/logout', { method: 'POST' }).catch(() => {}),
   models: () => j<{ models: ModelMeta[] }>('/app/models'),
   conversations: () => j<{ conversations: Conversation[] }>('/app/conversations'),

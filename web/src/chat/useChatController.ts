@@ -66,7 +66,7 @@ export function useChatController(opts: ControllerOpts) {
         }),
         signal: ctrl.signal,
       });
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         optsRef.current.onAuthExpired();
         return;
       }

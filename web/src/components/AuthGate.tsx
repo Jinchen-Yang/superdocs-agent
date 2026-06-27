@@ -1,31 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { api } from '../api';
 import type { User } from '../types';
 
+type Tab = 'sso' | 'local';
+
 export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [form, setForm] = useState({ username: '', password: '', displayName: '' });
+  const [tab, setTab] = useState<Tab>('sso');
+  const [mode, setMode] = useState<'login' | 'register'>('login'); // 本地账号
+  const [form, setForm] = useState({ username: '', password: '', displayName: '', studentId: '', ssoPassword: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState<{ campus: boolean; gate: boolean } | null>(null);
   const isRegister = mode === 'register';
+
+  useEffect(() => {
+    api.whoami().then((w) => w && setInfo({ campus: w.campus, gate: w.gate }));
+  }, []);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setError('');
   };
 
-  const submit = async () => {
-    const username = form.username.trim();
-    const password = form.password;
-    if (username.length < 2) return setError('用户名至少 2 个字符');
-    if (password.length < 8) return setError('密码至少 8 位');
+  const run = async (fn: () => Promise<{ user: User }>) => {
     setBusy(true);
     setError('');
     try {
-      const { user } = isRegister
-        ? await api.register({ username, password, displayName: form.displayName.trim() })
-        : await api.login({ username, password });
+      const { user } = await fn();
       onAuthed(user);
     } catch (e) {
       setError((e as Error).message || '失败');
@@ -33,6 +35,24 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
     }
   };
 
+  const submitLocal = () => {
+    const username = form.username.trim();
+    if (username.length < 2) return setError('用户名至少 2 个字符');
+    if (form.password.length < 8) return setError('密码至少 8 位');
+    run(() =>
+      isRegister
+        ? api.register({ username, password: form.password, displayName: form.displayName.trim() })
+        : api.login({ username, password: form.password }),
+    );
+  };
+
+  const submitSso = () => {
+    const studentId = form.studentId.trim();
+    if (!studentId || !form.ssoPassword) return setError('请填写学号和密码');
+    run(() => api.sso({ studentId, password: form.ssoPassword }));
+  };
+
+  const submit = () => (tab === 'sso' ? submitSso() : submitLocal());
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -40,8 +60,18 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
     }
   };
 
-  const inputCls =
-    'w-full rounded-xl border border-white/40 bg-white/60 px-3.5 py-3 text-[14.5px] outline-none dark:bg-white/5';
+  const inputCls = 'w-full rounded-xl border border-white/40 bg-white/60 px-3.5 py-3 text-base outline-none dark:bg-white/5';
+  const tabBtn = (t: Tab, label: string) => (
+    <button
+      onClick={() => {
+        setTab(t);
+        setError('');
+      }}
+      className={`flex-1 rounded-lg py-2 text-[13px] font-bold transition ${tab === t ? 'accent-grad text-white shadow' : 'text-sub'}`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div
@@ -56,31 +86,54 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
         <div className="accent-grad mx-auto grid size-14 place-items-center rounded-2xl shadow-lg">
           <Sparkles className="size-7 text-white" />
         </div>
-        <h1 className="m-0 text-xl font-extrabold">{isRegister ? '注册 superdocs' : '登录 superdocs'}</h1>
-        <p className="text-sub -mt-1 mb-1 text-[13px]">北邮智能助手 · 资料检索 + 新生答疑</p>
-        <input className={inputCls} placeholder="用户名" value={form.username} onChange={set('username')} onKeyDown={onKey} />
-        {isRegister && (
-          <input className={inputCls} placeholder="昵称（可选）" value={form.displayName} onChange={set('displayName')} onKeyDown={onKey} />
+        <h1 className="m-0 text-xl font-extrabold">登录 superdocs</h1>
+        <p className="text-sub -mt-1 text-[13px]">北邮智能助手 · 资料检索 + 新生答疑</p>
+
+        <div className="frost flex gap-1 rounded-xl p-1">
+          {tabBtn('sso', '北邮统一认证')}
+          {tabBtn('local', '本地账号')}
+        </div>
+
+        {info?.gate && (
+          <div className="text-[12px] font-semibold" style={{ color: info.campus ? '#19c39c' : 'var(--accent)' }}>
+            {info.campus ? '✓ 你在校园网内，可直接登录' : '校外访问：请用「北邮统一认证」登录'}
+          </div>
         )}
-        <input className={inputCls} type="password" placeholder="密码（至少 8 位）" value={form.password} onChange={set('password')} onKeyDown={onKey} />
+
+        {tab === 'sso' ? (
+          <>
+            <input className={inputCls} placeholder="学号" value={form.studentId} onChange={set('studentId')} onKeyDown={onKey} />
+            <input className={inputCls} type="password" placeholder="统一认证密码" value={form.ssoPassword} onChange={set('ssoPassword')} onKeyDown={onKey} />
+            <p className="text-faint -mt-1 text-[11.5px] leading-relaxed">用北邮学号和统一身份认证密码登录，校内外均可用，仅验证身份不存储密码。</p>
+          </>
+        ) : (
+          <>
+            <input className={inputCls} placeholder="用户名" value={form.username} onChange={set('username')} onKeyDown={onKey} />
+            {isRegister && (
+              <input className={inputCls} placeholder="昵称（可选）" value={form.displayName} onChange={set('displayName')} onKeyDown={onKey} />
+            )}
+            <input className={inputCls} type="password" placeholder="密码（至少 8 位）" value={form.password} onChange={set('password')} onKeyDown={onKey} />
+          </>
+        )}
+
         {error && <div className="text-[13px] font-semibold text-rose-500">{error}</div>}
-        <button
-          className="accent-grad mt-1 rounded-xl py-3 text-[15px] font-bold text-white shadow-md disabled:opacity-60"
-          onClick={submit}
-          disabled={busy}
-        >
-          {busy ? '请稍候…' : isRegister ? '注册并登录' : '登录'}
+
+        <button className="accent-grad mt-1 rounded-xl py-3 text-[15px] font-bold text-white shadow-md disabled:opacity-60" onClick={submit} disabled={busy}>
+          {busy ? '请稍候…' : tab === 'sso' ? '统一认证登录' : isRegister ? '注册并登录' : '登录'}
         </button>
-        <button
-          className="py-1 text-[13px] font-semibold"
-          style={{ color: 'var(--accent)' }}
-          onClick={() => {
-            setMode(isRegister ? 'login' : 'register');
-            setError('');
-          }}
-        >
-          {isRegister ? '已有账号？去登录' : '没有账号？去注册'}
-        </button>
+
+        {tab === 'local' && (
+          <button
+            className="py-1 text-[13px] font-semibold"
+            style={{ color: 'var(--accent)' }}
+            onClick={() => {
+              setMode(isRegister ? 'login' : 'register');
+              setError('');
+            }}
+          >
+            {isRegister ? '已有账号？去登录' : '没有账号？去注册'}
+          </button>
+        )}
       </div>
     </div>
   );
