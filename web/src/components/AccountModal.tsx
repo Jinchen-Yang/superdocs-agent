@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../api';
+import { Dialog } from './Dialog';
+import { toast } from './Toast';
 import type { Profile, User } from '../types';
 
 const fmt = (n: number) => {
@@ -27,8 +29,10 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
 
   const save = async () => {
     setSaving(true);
-    await api.saveMemory(memory).catch(() => {});
+    const r = await api.saveMemory(memory).catch(() => null);
     setSaving(false);
+    if (r && r.ok) toast.ok('记忆已保存');
+    else toast.err('保存失败，请重试');
   };
 
   const today = profile?.usage.today;
@@ -42,12 +46,11 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
   const sectionLabel = 'text-faint mt-2 text-[11.5px] font-extrabold uppercase tracking-wider';
 
   return (
-    <>
-      <div className="fixed inset-0 z-40 bg-[rgba(30,20,60,.34)] backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="glass fixed left-1/2 top-1/2 z-50 flex max-h-[86vh] w-[92%] max-w-[440px] -translate-x-1/2 -translate-y-1/2 flex-col gap-2.5 overflow-y-auto rounded-3xl p-5"
-        style={{ animation: 'riseIn .3s ease both' }}
-      >
+    <Dialog
+      label="账号与个人页"
+      onClose={onClose}
+      className="glass fixed left-1/2 top-1/2 z-50 flex max-h-[86vh] w-[92%] max-w-[440px] -translate-x-1/2 -translate-y-1/2 flex-col gap-2.5 overflow-y-auto rounded-3xl p-5"
+    >
         <div className="flex items-center gap-3">
           <div className="accent-grad grid size-12 shrink-0 place-items-center rounded-2xl text-xl font-extrabold text-white">
             {(user.avatarSeed || user.displayName || '?').slice(0, 1).toUpperCase()}
@@ -56,7 +59,7 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
             <div className="text-[17px] font-extrabold">{user.displayName || user.username}</div>
             <div className="text-sub text-[12.5px] font-semibold">@{user.username} · {user.provider}</div>
           </div>
-          <button onClick={onClose} className="text-sub grid size-8 place-items-center rounded-lg bg-black/5 dark:bg-white/10">
+          <button onClick={onClose} aria-label="关闭" className="text-sub grid size-8 place-items-center rounded-lg bg-black/5 dark:bg-white/10">
             <X className="size-4" />
           </button>
         </div>
@@ -96,7 +99,6 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
             退出登录
           </button>
         </div>
-      </div>
-    </>
+    </Dialog>
   );
 }

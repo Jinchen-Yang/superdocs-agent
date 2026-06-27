@@ -28,12 +28,14 @@ export type Conversation = { id: string; title: string; updatedAt: string };
 export type ServerMessage = { role: 'user' | 'assistant'; content: string };
 
 // 前端持有的消息(external store)。reasoning=深度思考,searching=检索中占位。
+// image=用户随该消息上传的图片(data URL),用于多模态与气泡内回显。
 export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   reasoning?: string;
   searching?: boolean;
+  image?: string;
 };
 
 export type Usage = {

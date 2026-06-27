@@ -70,6 +70,9 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
           e.stopPropagation();
           setMenu((v) => !v);
         }}
+        aria-label="会话操作菜单"
+        aria-haspopup="menu"
+        aria-expanded={menu}
         className="text-faint absolute right-1 grid size-7 place-items-center rounded-lg opacity-100 transition md:opacity-0 md:group-hover:opacity-100"
       >
         <MoreHorizontal className="size-4" />
@@ -125,6 +128,7 @@ export function Sidebar({ conversations, activeId, user, onSelect, onNew, onRena
 
   return (
     <aside
+      aria-label="会话侧边栏"
       className="frost flex h-full w-[272px] shrink-0 flex-col gap-2 rounded-none p-3.5 md:rounded-3xl"
       style={{
         // 移动抽屉占满左侧到屏幕边缘，避开安全区；桌面端 env(...) = 0，等同 p-3.5。

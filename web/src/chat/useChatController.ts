@@ -5,6 +5,7 @@ import {
   type ThreadMessageLike,
 } from '@assistant-ui/react';
 import { api, uid } from '../api';
+import { toast } from '../components/Toast';
 import type { ChatMessage } from '../types';
 
 type ControllerOpts = {
@@ -12,14 +13,21 @@ type ControllerOpts = {
   thinkingRef: RefObject<boolean>;
   onAuthExpired: () => void;
   onConversationsChanged: () => void;
+  // 上传/移除图片时通知 App 切换模型（有图→多模态，平时→DeepSeek）。
+  onImageAttached?: (attached: boolean) => void;
 };
 
+export type Attachment = { dataUrl: string; name: string };
+
+type Part = { type: 'text'; text: string } | { type: 'reasoning'; text: string } | { type: 'image'; image: string };
+
 const convertMessage = (m: ChatMessage): ThreadMessageLike => {
-  const parts: ({ type: 'text'; text: string } | { type: 'reasoning'; text: string })[] = [];
+  const parts: Part[] = [];
   if (m.role === 'assistant') {
     if (m.reasoning) parts.push({ type: 'reasoning', text: m.reasoning });
     else if (m.searching && !m.content) parts.push({ type: 'reasoning', text: '🔍 正在检索北邮资料…' });
   }
+  if (m.role === 'user' && m.image) parts.push({ type: 'image', image: m.image });
   parts.push({ type: 'text', text: m.content });
   return { id: m.id, role: m.role, content: parts };
 };
@@ -35,22 +43,54 @@ export function useChatController(opts: ControllerOpts) {
   const optsRef = useRef(opts);
   optsRef.current = opts;
 
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const attachmentRef = useRef<Attachment | null>(attachment);
+  attachmentRef.current = attachment;
+
+  const attach = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return toast.err('请选择图片文件');
+    if (file.size > 8 * 1024 * 1024) return toast.err('图片需小于 8MB');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachment({ dataUrl: String(reader.result), name: file.name });
+      optsRef.current.onImageAttached?.(true); // 通知 App 切到多模态模型
+    };
+    reader.onerror = () => toast.err('图片读取失败');
+    reader.readAsDataURL(file);
+  }, []);
+
+  const clearAttachment = useCallback(() => {
+    setAttachment(null);
+    optsRef.current.onImageAttached?.(false); // 切回 DeepSeek
+  }, []);
+
   const patch = (id: string, p: Partial<ChatMessage>) =>
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...p } : m)));
 
   const send = useCallback(async (text: string) => {
     const t = text.trim();
-    if (!t || abortRef.current) return;
+    const img = attachmentRef.current;
+    if ((!t && !img) || abortRef.current) return;
     const aId = uid();
     setMessages((prev) => [
       ...prev,
-      { id: uid(), role: 'user', content: t },
+      { id: uid(), role: 'user', content: t, image: img?.dataUrl },
       { id: aId, role: 'assistant', content: '', reasoning: '' },
     ]);
+    // 本次请求用当前(已因附件切到多模态的)模型；随后清空附件并切回 DeepSeek，不影响本次。
+    const model = optsRef.current.modelRef.current;
+    if (img) {
+      setAttachment(null);
+      optsRef.current.onImageAttached?.(false);
+    }
     setRunning(true);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const thread = threadRef.current;
+    // 有图：content 用多模态分块数组（text + image）；无图：纯文本字符串。
+    const userContent = img
+      ? [...(t ? [{ type: 'text', text: t }] : []), { type: 'image', image: img.dataUrl }]
+      : t;
     let content = '';
     let reasoning = '';
     let searching = false;
@@ -59,8 +99,8 @@ export function useChatController(opts: ControllerOpts) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: t }],
-          model: optsRef.current.modelRef.current,
+          messages: [{ role: 'user', content: userContent }],
+          model,
           thread,
           thinking: optsRef.current.thinkingRef.current,
         }),
@@ -147,9 +187,9 @@ export function useChatController(opts: ControllerOpts) {
       const { messages: ms } = await api.messages(id);
       setMessages(ms.filter((m) => m.content).map((m) => ({ id: uid(), role: m.role, content: m.content })));
     } catch {
-      /* ignore */
+      toast.err('打开会话失败，请重试');
     }
   }, []);
 
-  return { runtime, activeId, hasMessages: messages.length > 0, isRunning, newChat, openConversation, send };
+  return { runtime, activeId, hasMessages: messages.length > 0, isRunning, newChat, openConversation, send, attachment, attach, clearAttachment };
 }

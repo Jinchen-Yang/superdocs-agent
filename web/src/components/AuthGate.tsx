@@ -8,7 +8,7 @@ type Tab = 'sso' | 'local';
 export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
   const [tab, setTab] = useState<Tab>('sso');
   const [mode, setMode] = useState<'login' | 'register'>('login'); // 本地账号
-  const [form, setForm] = useState({ username: '', password: '', displayName: '', studentId: '', ssoPassword: '' });
+  const [form, setForm] = useState({ username: '', password: '', studentId: '', ssoPassword: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<{ campus: boolean; gate: boolean } | null>(null);
@@ -55,7 +55,10 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
     run(() => api.sso({ studentId, password: form.ssoPassword }));
   };
 
-  const submit = () => (tab === 'sso' ? submitSso() : submitLocal());
+  const submit = () => {
+    if (busy) return; // 防 Enter 绕过 disabled 重复提交
+    return tab === 'sso' ? submitSso() : submitLocal();
+  };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();

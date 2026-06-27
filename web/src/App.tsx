@@ -6,9 +6,10 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { AccountModal } from './components/AccountModal';
 import { AdminModal } from './components/AdminModal';
-import { ChatSendProvider, Thread } from './chat/Thread';
+import { AttachmentProvider, ChatSendProvider, Thread } from './chat/Thread';
 import { useChatController } from './chat/useChatController';
 import { api } from './api';
+import { Toaster, toast } from './components/Toast';
 import type { Conversation, ModelMeta, User } from './types';
 
 export function App() {
@@ -31,7 +32,7 @@ export function App() {
   thinkingRef.current = thinking;
 
   const loadConversations = useCallback(() => {
-    api.conversations().then((d) => setConversations(d.conversations)).catch(() => {});
+    api.conversations().then((d) => setConversations(d.conversations)).catch(() => toast.err('加载会话列表失败'));
   }, []);
 
   const chat = useChatController({
@@ -42,6 +43,20 @@ export function App() {
       setView('auth');
     },
     onConversationsChanged: loadConversations,
+    // 上传图片→自动切到多模态模型；移除/发送后→切回 DeepSeek（"平时保持 DeepSeek"）。
+    onImageAttached: (attached) => {
+      if (attached) {
+        const mm = models.find((m) => m.multimodal);
+        if (mm) {
+          setModel(mm.id);
+          setThinking(false);
+        } else {
+          toast.err('当前没有可用的多模态模型');
+        }
+      } else {
+        setModel('deepseek-v4-flash');
+      }
+    },
   });
 
   useEffect(() => {
@@ -55,6 +70,14 @@ export function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // 移动抽屉打开时 Esc 关闭（键盘可达）。
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSidebarOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sidebarOpen]);
+
   const afterLogin = useCallback(() => {
     api
       .models()
@@ -62,7 +85,7 @@ export function App() {
         setModels(d.models);
         if (d.models[0]) setModel(d.models[0].id);
       })
-      .catch(() => {});
+      .catch(() => toast.err('加载模型列表失败'));
     loadConversations();
   }, [loadConversations]);
 
@@ -126,6 +149,12 @@ export function App() {
     return (
       <>
         <Background />
+        <Toaster />
+        {view === 'loading' && (
+          <div className="relative grid h-full place-items-center">
+            <div className="size-8 animate-spin rounded-full border-2 border-white/30 border-t-[var(--accent)]" role="status" aria-label="加载中" />
+          </div>
+        )}
         {view === 'auth' && <div className="relative h-full"><AuthGate onAuthed={onAuthed} /></div>}
       </>
     );
@@ -186,7 +215,9 @@ export function App() {
           <div className="min-h-0 flex-1">
             <AssistantRuntimeProvider runtime={chat.runtime}>
               <ChatSendProvider value={chat.send}>
-                <Thread />
+                <AttachmentProvider value={{ attachment: chat.attachment, attach: chat.attach, clear: chat.clearAttachment }}>
+                  <Thread />
+                </AttachmentProvider>
               </ChatSendProvider>
             </AssistantRuntimeProvider>
           </div>
@@ -201,6 +232,7 @@ export function App() {
         />
       )}
       {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
+      <Toaster />
     </>
   );
 }
