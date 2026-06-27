@@ -24,6 +24,11 @@ const MAX_AGE = 60 * 60 * 24 * 30; // 30 天
 // 且按宿主站分区(CHIPS)隔离。跨站 CSRF 由"仅接受 application/json + 无通配 CORS"兜底。
 // 开发(无 HTTPS)回落 SameSite=Lax。
 const COOKIE_ATTRS = IS_PROD ? '; Secure; SameSite=None; Partitioned' : '; SameSite=Lax';
+// 改版前的旧 cookie 不带 Partitioned。Chrome 把「属性不同的同名 cookie」视为两份独立 cookie：
+// 新版的 Set-Cookie 覆盖不到旧的、clearSession 也清不掉它 → 旧 cookie 长期残留，
+// readSession 一旦先取到那条旧格式 token 就一直 401（换浏览器/重登都没用）。
+// 故清理/签发时额外针对「非 Partitioned」的旧 cookie 下发一份删除。
+const LEGACY_CLEAR_ATTRS = IS_PROD ? '; Secure; SameSite=Lax' : '; SameSite=Lax';
 
 export type SessionClaims = { userId: string; epoch: number };
 
@@ -56,22 +61,28 @@ export function issueSession(c: any, userId: string, epoch: number): void {
   c.header('Set-Cookie', `${COOKIE}=${makeToken(userId, epoch)}; Path=/; HttpOnly${COOKIE_ATTRS}; Max-Age=${MAX_AGE}`, {
     append: true,
   });
+  // 顺手删掉旧版(非 Partitioned)同名 cookie，避免新旧并存把 readSession 带偏。
+  c.header('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly${LEGACY_CLEAR_ATTRS}; Max-Age=0`, { append: true });
 }
 
 export function clearSession(c: any): void {
+  // 新版(Partitioned)与旧版(非 Partitioned)各清一份，确保彻底登出、不残留旧 cookie。
   c.header('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly${COOKIE_ATTRS}; Max-Age=0`, { append: true });
+  c.header('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly${LEGACY_CLEAR_ATTRS}; Max-Age=0`, { append: true });
 }
 
 // 从签名 cookie 解出 { userId, epoch }；无 cookie / 验签失败 / 过期时返回 null。
 export function readSession(c: any): SessionClaims | null {
   const raw: string | undefined = c.req.header('Cookie') || c.req.header('cookie');
   if (!raw) return null;
+  // 可能同时存在多个同名 sd_session(新版 Partitioned + 旧版残留)。逐个验签，取第一个有效的——
+  // 只要请求带了有效的新 cookie，旧的失效 cookie 不会再把用户挡在 401。
   for (const part of raw.split(';')) {
     const idx = part.indexOf('=');
     if (idx < 0) continue;
-    if (part.slice(0, idx).trim() === COOKIE) {
-      return verifyToken(decodeURIComponent(part.slice(idx + 1).trim()));
-    }
+    if (part.slice(0, idx).trim() !== COOKIE) continue;
+    const claims = verifyToken(decodeURIComponent(part.slice(idx + 1).trim()));
+    if (claims) return claims;
   }
   return null;
 }
