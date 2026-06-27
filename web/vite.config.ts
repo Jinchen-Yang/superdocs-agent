@@ -10,7 +10,7 @@ export default defineConfig({
   build: { outDir: 'dist', emptyOutDir: true },
   server: {
     proxy: Object.fromEntries(
-      ['/app/auth', '/app/chat', '/app/conversations', '/app/profile', '/app/models'].map((p) => [
+      ['/app/auth', '/app/chat', '/app/conversations', '/app/profile', '/app/models', '/app/admin', '/app/health'].map((p) => [
         p, { target: 'http://127.0.0.1:3100', changeOrigin: true },
       ]),
     ),

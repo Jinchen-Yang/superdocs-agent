@@ -13,9 +13,12 @@ import { profileRoutes } from './routes/profile';
 import { adminRoutes } from './routes/admin';
 import { healthRoutes } from './routes/health';
 import { installCrashGuard, attachPgPoolErrorHandler } from './util/crash-guard';
+import { validateEnv } from './config/env';
 
 // 尽早安装：兜住 @mastra/pg 内部够不到的 pool 的空闲连接错误，避免 crash 整进程（P0-2）。
 installCrashGuard();
+// 启动即集中校验环境变量，配错在 boot 阶段就 fail-fast（而非首个请求才零散报错）。
+validateEnv();
 
 // 前端(Vite+React+assistant-ui)构建产物目录（部署时可用 NEXT_DIR 覆盖）。
 const NEXT_DIR = process.env.NEXT_DIR || join(process.cwd(), 'web/dist');
