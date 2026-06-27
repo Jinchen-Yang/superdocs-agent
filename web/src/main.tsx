@@ -10,9 +10,18 @@ const setKb = () => {
   const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
   document.documentElement.style.setProperty('--kb', kb + 'px');
 };
+// iOS Safari 聚焦后 visualViewport 上报有延迟，补几拍重算，避免输入框被键盘短暂遮住。
+const setKbSoon = () => {
+  setKb();
+  setTimeout(setKb, 60);
+  setTimeout(setKb, 250);
+};
 setKb();
 window.visualViewport?.addEventListener('resize', setKb);
 window.visualViewport?.addEventListener('scroll', setKb);
+window.addEventListener('focusin', setKbSoon);
+window.addEventListener('focusout', setKbSoon);
+window.addEventListener('orientationchange', setKbSoon);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

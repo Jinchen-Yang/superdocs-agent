@@ -95,7 +95,8 @@ const Composer: FC = () => (
     <ComposerPrimitive.Root className="glass flex items-end gap-2 rounded-3xl py-2 pl-3.5 pr-2">
       <ComposerPrimitive.Input
         rows={1}
-        autoFocus
+        // 仅桌面(精确指针 + 宽屏)自动聚焦；移动端别一进来就弹键盘遮住欢迎页。
+        autoFocus={typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches && window.innerWidth > 760}
         placeholder="给 superdocs 发送消息…"
         className="max-h-36 min-h-6 flex-1 resize-none bg-transparent py-2 text-[15px] leading-normal outline-none placeholder:text-[var(--faint)]"
       />
