@@ -10,7 +10,7 @@ const fmt = (n: number) => {
   return String(n);
 };
 
-export function AccountModal({ user, onClose, onLogout }: { user: User; onClose: () => void; onLogout: () => void }) {
+export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: User; onClose: () => void; onLogout: () => void; onOpenAdmin?: () => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memory, setMemory] = useState('');
   const [saving, setSaving] = useState(false);
@@ -81,6 +81,12 @@ export function AccountModal({ user, onClose, onLogout }: { user: User; onClose:
           placeholder="助手会自动记录你的学号 / 姓名 / 学院 / 常用课程 / 偏好，也可手动编辑后保存。"
           className="min-h-28 w-full resize-y rounded-xl border border-white/40 bg-white/55 px-3.5 py-3 text-[13.5px] leading-relaxed outline-none dark:bg-white/5"
         />
+
+        {user.isAdmin && onOpenAdmin && (
+          <button onClick={onOpenAdmin} className="frost mt-1 rounded-xl py-2.5 text-[13.5px] font-bold" style={{ color: 'var(--accent)' }}>
+            📊 管理统计
+          </button>
+        )}
 
         <div className="mt-1.5 flex gap-2.5">
           <button onClick={save} className="accent-grad flex-1 rounded-xl py-3 text-[14px] font-bold text-white shadow-md disabled:opacity-60" disabled={saving}>
