@@ -1,4 +1,4 @@
-import type { Conversation, ModelMeta, Profile, ServerMessage, User } from './types';
+import type { AdminStats, Conversation, ModelMeta, Profile, ServerMessage, User } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -44,6 +44,7 @@ export const api = {
     fetch(`/app/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   messages: (id: string) => j<{ messages: ServerMessage[] }>(`/app/conversations/${encodeURIComponent(id)}/messages`),
   profile: () => j<Profile>('/app/profile'),
+  adminStats: () => j<AdminStats>('/app/admin/stats'),
   saveMemory: (workingMemory: string) =>
     fetch('/app/profile', {
       method: 'PUT',
