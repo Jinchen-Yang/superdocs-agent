@@ -5,27 +5,28 @@ import { withTimeout } from '../util/fetch';
 // 上游若一直不返回响应头则在此超时(默认 30s)；一旦开始返回(流式补全)即不再约束，正常长流不受影响。
 const llmFetch = withTimeout(Number(process.env.LLM_TIMEOUT_MS) || 30_000);
 
-export type Provider = 'deepseek' | 'zhipu' | 'qwen';
+export type Provider = 'deepseek' | 'mimo';
 export type ModelMeta = {
   id: string; provider: Provider; label: string; multimodal: boolean;
   thinking: boolean; // 是否支持"深度思考"开关(DeepSeek V4 via providerOptions)
   inPrice: number; outPrice: number; currency: 'CNY'; enabled: boolean;
 };
 
-// 一处定义所有可选模型;加模型=加一项。价格 ¥/百万 token(约值,按官方美元价×7 折算,以官网为准)。
-// 注:deepseek-chat / deepseek-reasoner 于 2026-07-24 下线,已切换到 V4 正式 ID。
+// 一处定义所有可选模型;加模型=加一项。label 后缀标注能力档,方便用户按"智能程度"选。
+// MiMo(小米)为按月续费的 credits 计费(非按 token 计价),inPrice/outPrice 仅占位;
+// 每账户用量限额方案待后续设计(见 README/TODO)。DeepSeek 价格 ¥/百万 token(约值,以官网为准)。
 export const MODELS: Record<string, ModelMeta> = {
-  'deepseek-v4-flash': { id: 'deepseek-v4-flash', provider: 'deepseek', label: 'DeepSeek V4',        multimodal: false, thinking: true,  inPrice: 1, outPrice: 2,  currency: 'CNY', enabled: true },
-  'deepseek-v4-pro':   { id: 'deepseek-v4-pro',   provider: 'deepseek', label: 'DeepSeek V4 Pro',    multimodal: false, thinking: true,  inPrice: 3, outPrice: 6,  currency: 'CNY', enabled: true },
-  'glm-4.6':           { id: 'glm-4.6',           provider: 'zhipu',    label: '智谱 GLM-4.6',        multimodal: false, thinking: false, inPrice: 0, outPrice: 0,  currency: 'CNY', enabled: true },
-  'glm-4v-plus':       { id: 'glm-4v-plus',       provider: 'zhipu',    label: '智谱 GLM-4V(多模态)', multimodal: true,  thinking: false, inPrice: 0, outPrice: 0,  currency: 'CNY', enabled: true },
-  'qwen-vl-max':       { id: 'qwen-vl-max',       provider: 'qwen',     label: '通义千问 VL(多模态)', multimodal: true,  thinking: false, inPrice: 0, outPrice: 0,  currency: 'CNY', enabled: true },
+  'deepseek-v4-flash': { id: 'deepseek-v4-flash', provider: 'deepseek', label: 'DeepSeek V4 · 快速',         multimodal: false, thinking: true,  inPrice: 1, outPrice: 2, currency: 'CNY', enabled: true },
+  'deepseek-v4-pro':   { id: 'deepseek-v4-pro',   provider: 'deepseek', label: 'DeepSeek V4 Pro · 更强',     multimodal: false, thinking: true,  inPrice: 3, outPrice: 6, currency: 'CNY', enabled: true },
+  'mimo-v2.5-pro':     { id: 'mimo-v2.5-pro',     provider: 'mimo',     label: '小米 MiMo V2.5 Pro · 旗舰',   multimodal: false, thinking: false, inPrice: 0, outPrice: 0, currency: 'CNY', enabled: true },
+  'mimo-v2.5':         { id: 'mimo-v2.5',         provider: 'mimo',     label: '小米 MiMo V2.5 · 标准',       multimodal: false, thinking: false, inPrice: 0, outPrice: 0, currency: 'CNY', enabled: true },
+  'mimo-v2-pro':       { id: 'mimo-v2-pro',       provider: 'mimo',     label: '小米 MiMo V2 Pro · 上代旗舰', multimodal: false, thinking: false, inPrice: 0, outPrice: 0, currency: 'CNY', enabled: true },
+  'mimo-v2-omni':      { id: 'mimo-v2-omni',      provider: 'mimo',     label: '小米 MiMo V2 Omni · 多模态',  multimodal: true,  thinking: false, inPrice: 0, outPrice: 0, currency: 'CNY', enabled: true },
 };
 
 const providerKeys: Record<Provider, string | undefined> = {
   deepseek: process.env.DEEPSEEK_API_KEY,
-  zhipu: process.env.ZHIPU_API_KEY,
-  qwen: process.env.QWEN_API_KEY,
+  mimo: process.env.MIMO_API_KEY,
 };
 
 // 启动即检查:缺 key 的提供商先告警,尽早暴露配置缺漏(而非等用户点了某模型才在调用时 401)。
@@ -35,8 +36,8 @@ for (const [p, k] of Object.entries(providerKeys)) {
 
 const providers = {
   deepseek: createDeepSeek({ apiKey: providerKeys.deepseek ?? '', fetch: llmFetch }),
-  zhipu: createOpenAICompatible({ name: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', apiKey: providerKeys.zhipu ?? '', fetch: llmFetch }),
-  qwen: createOpenAICompatible({ name: 'qwen', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: providerKeys.qwen ?? '', fetch: llmFetch }),
+  // 小米 MiMo：OpenAI 兼容协议，专属 Base URL。
+  mimo: createOpenAICompatible({ name: 'mimo', baseURL: 'https://token-plan-cn.xiaomimimo.com/v1', apiKey: providerKeys.mimo ?? '', fetch: llmFetch }),
 } as const;
 
 export const DEFAULT_MODEL = 'deepseek-v4-flash';
