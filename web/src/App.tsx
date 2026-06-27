@@ -144,7 +144,16 @@ export function App() {
 
         <main
           className="frost relative flex min-w-0 flex-1 flex-col overflow-hidden md:rounded-3xl"
-          style={{ paddingBottom: 'var(--kb, 0px)', transition: 'padding-bottom .18s ease' }}
+          style={{
+            // 安全区(刘海/灵动岛/Home 指示条)：移动端 main 占满全屏，需让顶栏/输入框避开。
+            // 桌面端 env(...) 解析为 0，md:p-3 外框照旧，无副作用。
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)',
+            // 键盘弹起用 --kb 抬升；收起时退回 Home 指示条高度。取 max 避免键盘弹起时双重叠加。
+            paddingBottom: 'max(env(safe-area-inset-bottom), var(--kb, 0px))',
+            transition: 'padding-bottom .18s ease',
+          }}
         >
           <Topbar
             models={models}
