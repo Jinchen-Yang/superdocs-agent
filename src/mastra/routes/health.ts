@@ -1,5 +1,6 @@
 import { registerApiRoute } from '@mastra/core/server';
 import { query } from '../db/pool';
+import { withDeadline } from '../util/fetch';
 import { totalDocs } from '../tools/documents/search-index';
 import { totalKnowledge } from '../tools/knowledge/knowledge-index';
 
@@ -10,11 +11,8 @@ export const healthRoutes = [
     handler: async (c) => {
       let db = false;
       try {
-        // 加 2s 竞速超时：DB 硬挂时快速吐 503，而非阻塞到连接/语句超时(10~15s)被探针判成"无响应"。
-        await Promise.race([
-          query('SELECT 1'),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('health db timeout')), 2_000)),
-        ]);
+        // 加 2s 超时：DB 硬挂时快速吐 503，而非阻塞到连接/语句超时(10~15s)被探针判成"无响应"。
+        await withDeadline(query('SELECT 1'), 2_000, 'health db');
         db = true;
       } catch {
         /* db 保持 false */
