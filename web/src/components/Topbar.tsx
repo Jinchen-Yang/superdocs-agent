@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, Check, ChevronDown, Menu, Moon, Plus, Sun, X } from 'lucide-react';
+import { Brain, Check, ChevronDown, Menu, Moon, Sun, X } from 'lucide-react';
 import type { ModelMeta } from '../types';
 
 type Props = {
@@ -12,11 +12,10 @@ type Props = {
   onTheme: () => void;
   onMenu: () => void;
   embed?: boolean;
-  onNew?: () => void;
   onClose?: () => void;
 };
 
-export function Topbar({ models, model, onModel, thinking, onThinking, theme, onTheme, onMenu, embed, onNew, onClose }: Props) {
+export function Topbar({ models, model, onModel, thinking, onThinking, theme, onTheme, onMenu, embed, onClose }: Props) {
   const [open, setOpen] = useState(false);
   const cur = models.find((m) => m.id === model);
   const thinkAvailable = cur ? cur.thinking : false;
@@ -24,15 +23,9 @@ export function Topbar({ models, model, onModel, thinking, onThinking, theme, on
   return (
     <header className="flex items-center justify-between gap-2 border-b border-black/10 px-3 py-2.5 dark:border-white/5 md:px-5 md:py-3.5">
       <div className="flex min-w-0 items-center gap-2">
-        {embed ? (
-          <button onClick={onNew} title="新对话" className="grid size-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5">
-            <Plus className="size-5" />
-          </button>
-        ) : (
-          <button onClick={onMenu} className="grid size-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5 md:hidden">
-            <Menu className="size-5" />
-          </button>
-        )}
+        <button onClick={onMenu} className={'grid size-9 shrink-0 place-items-center rounded-xl border border-white/40 bg-white/50 dark:bg-white/5 ' + (embed ? '' : 'md:hidden')}>
+          <Menu className="size-5" />
+        </button>
 
         <div className="relative">
           <button
