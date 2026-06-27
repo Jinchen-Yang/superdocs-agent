@@ -84,7 +84,9 @@ export const chatRoutes = [
       try { resolved = resolveModel(modelId); }
       catch (e: any) { return c.json({ error: '该模型暂不可用：' + (e?.message || e) }, 503); }
 
-      const streamOpts: any = { model: resolved, memory: { resource, thread: threadId } };
+      // token 关键:封顶工具循环步数。无上限时模型会狂调检索工具(实测一问 58~95 次工具调用,
+      // 每步都重发上下文 → input 爆炸)。一次问答 ≤6 步足够(搜→取→必要时再搜→答)。
+      const streamOpts: any = { model: resolved, memory: { resource, thread: threadId }, maxSteps: 6 };
       if (providerOptions) streamOpts.providerOptions = providerOptions;
       // 流初始化阶段(建连/鉴权/超时)抛错时给结构化 502，而非裸 500；细节只进日志不回显，避免泄露内部拓扑。
       let result: any;
