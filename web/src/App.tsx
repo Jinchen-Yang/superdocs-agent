@@ -23,6 +23,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const embed = new URLSearchParams(window.location.search).has('embed');
 
   const modelRef = useRef(model);
   modelRef.current = model;
@@ -81,6 +82,19 @@ export function App() {
     setView('app');
     afterLogin();
   };
+
+  // 内嵌模式：通知父页就绪，并接收宿主签发的 token 自动登录（方案 A）。
+  useEffect(() => {
+    if (!embed) return;
+    const onMsg = (e: MessageEvent) => {
+      const t = e.data && e.data.type === 'sd-embed-token' ? e.data.token : null;
+      if (t) api.embed(String(t)).then((d) => onAuthed(d.user)).catch(() => {});
+    };
+    window.addEventListener('message', onMsg);
+    try { window.parent.postMessage({ type: 'sd-embed-ready' }, '*'); } catch { /* not embedded */ }
+    return () => window.removeEventListener('message', onMsg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embed]);
   const onModel = (id: string) => {
     setModel(id);
     const m = models.find((x) => x.id === id);
@@ -121,6 +135,8 @@ export function App() {
     <>
       <Background />
       <div className="relative flex h-full p-0 md:gap-3 md:p-3">
+        {!embed && (
+        <>
         <div
           className={
             mobile
@@ -143,6 +159,8 @@ export function App() {
           />
         </div>
         {mobile && sidebarOpen && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+        </>
+        )}
 
         <main
           className="frost relative flex min-w-0 flex-1 flex-col overflow-hidden md:rounded-3xl"
@@ -166,6 +184,9 @@ export function App() {
             theme={theme}
             onTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
             onMenu={() => setSidebarOpen(true)}
+            embed={embed}
+            onNew={onNewChat}
+            onClose={() => { try { window.parent.postMessage({ type: 'sd-embed-close' }, '*'); } catch { /* noop */ } }}
           />
           <div className="min-h-0 flex-1">
             <AssistantRuntimeProvider runtime={chat.runtime}>

@@ -2,6 +2,7 @@ import { registerApiRoute } from '@mastra/core/server';
 import { ensureSchema } from '../db/schema';
 import { issueSession, clearSession } from '../auth/session';
 import { buptSsoVerify, findOrCreateSsoUser, localVerify, bindLocalCredentials } from '../auth/provider';
+import { verifyEmbedToken } from '../auth/embed';
 import { getUserById, publicUser } from '../auth/user';
 import { authed } from '../auth/guard';
 import { rateLimit, clientIp } from '../auth/ratelimit';
@@ -91,6 +92,23 @@ export const authRoutes = [
       } catch (e: any) {
         return c.json({ error: ssoErrMsg(e) }, 401);
       }
+    },
+  }),
+
+  // 内嵌单点登录：宿主站签发的 token 换取本服务会话（方案 A，需配 EMBED_JWT_SECRET）。
+  registerApiRoute('/app/auth/embed', {
+    method: 'POST',
+    handler: async (c) => {
+      await ensureSchema();
+      if (!rateLimit(`embed:${clientIp(c)}`, 20, 60_000)) return c.json({ error: '尝试过于频繁，请稍后再试' }, 429);
+      let body: any;
+      try { body = await c.req.json(); } catch { return c.json({ error: '请求体需为 JSON' }, 400); }
+      const id = verifyEmbedToken(String(body?.token || ''));
+      if (!id) return c.json({ error: '内嵌令牌无效或未启用' }, 401);
+      const userId = await findOrCreateSsoUser(id.studentId, id.realName);
+      issueSession(c, userId);
+      const u = await getUserById(userId);
+      return c.json({ user: u ? publicUser(u) : null });
     },
   }),
 
