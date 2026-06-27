@@ -6,17 +6,31 @@ on:
   pull_request:
 
 jobs:
-  typecheck:
-    name: Typecheck
+  check:
+    name: Typecheck · Lint · Test · Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
+
       # 本仓库 package-lock 解析自 npmmirror（国内源），GitHub runner 在海外，
       # 故显式走官方源用 npm install 重新解析，避免拉包慢/失败。
-      - name: Install dependencies
+      - name: Install dependencies (root)
         run: npm install --no-audit --no-fund --registry=https://registry.npmjs.org/
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Install dependencies (web)
+        run: npm install --no-audit --no-fund --registry=https://registry.npmjs.org/ --prefix web
+
+      - name: Build web
+        run: npm run build --prefix web

@@ -17,7 +17,7 @@ export const healthRoutes = [
         ]);
         db = true;
       } catch {
-        db = false;
+        /* db 保持 false */
       }
       return c.json(
         {

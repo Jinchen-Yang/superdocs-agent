@@ -1,0 +1,12 @@
+# 构建产物 / 依赖 / 数据
+node_modules
+.mastra
+dist
+web/dist
+web/node_modules
+data
+*.lock
+package-lock.json
+
+# 刻意对齐的源文件（手动维护对齐的表格式，prettier 会破坏）
+src/mastra/models/registry.ts
