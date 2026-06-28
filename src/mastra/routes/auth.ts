@@ -53,7 +53,7 @@ export const authRoutes = [
       let r: { userId: string } | { error: string };
       try {
         r = await migrateLocalToSso(oldUsername, oldPassword, identity.studentId, identity.realName);
-      } catch (e: any) {
+      } catch {
         // 极端并发下唯一索引冲突(23505)等 → 让用户重试，而非裸 500。
         return c.json({ error: '操作冲突，请稍后重试' }, 409);
       }
