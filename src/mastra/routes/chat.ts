@@ -85,10 +85,12 @@ export const chatRoutes = [
       try { resolved = resolveModel(modelId); }
       catch (e: any) { return c.json({ error: '该模型暂不可用：' + (e?.message || e) }, 503); }
 
-      // token 关键:封顶工具循环。无上限(Mastra 默认 100 步)时模型会狂调 search_knowledge
-      // (实测一问 30+ 次,每次重发上下文 → input 爆炸)。AI SDK v6 用 stopWhen 控制(maxSteps 不生效)。
-      // temperature 调低收敛发散性(团队反馈"输出花哨/不可信")。DeepSeek 思考模式会忽略它,非思考模式生效。
-      const streamOpts: any = { model: resolved, memory: { resource, thread: threadId }, stopWhen: stepCountIs(4), temperature: Number(process.env.LLM_TEMPERATURE) || 0.3 };
+      // token 关键:封顶工具循环步数(无上限时模型会狂刷检索 → input 爆炸)。AI SDK v6 用 stopWhen(maxSteps 不生效)。
+      // 原先封到 4 太紧:深度思考模式每步"先思考再调一次工具",4 步常被反复检索用光、还没到"给答案"
+      // 那一步就被停 → 回答空白(刷新即消失)。放到 8(可配 AGENT_MAX_STEPS),给思考模式留出"检索完再作答"
+      // 的余量,仍远低于 Mastra 默认 100、不会回到 token 爆炸(检索工具已合并成一步 answer_knowledge)。
+      // temperature 调低收敛发散性。DeepSeek 思考模式会忽略它,非思考模式生效。
+      const streamOpts: any = { model: resolved, memory: { resource, thread: threadId }, stopWhen: stepCountIs(Number(process.env.AGENT_MAX_STEPS) || 8), temperature: Number(process.env.LLM_TEMPERATURE) || 0.3 };
       if (providerOptions) streamOpts.providerOptions = providerOptions;
       // 流初始化阶段(建连/鉴权/超时)抛错时给结构化 502，而非裸 500；细节只进日志不回显，避免泄露内部拓扑。
       let result: any;
