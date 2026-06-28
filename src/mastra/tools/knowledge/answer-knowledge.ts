@@ -17,6 +17,7 @@ export const answerKnowledge = createTool({
     query: z.string().describe('用户问题或关键词，如 "沙河宿舍用电" / "高等数学 期末"'),
     source: z.enum(['survival-guide', 'neowiki']).optional().describe('survival-guide=生存指南, neowiki=真题'),
     course: z.string().optional().describe('课程名包含匹配'),
+    college: z.string().optional().describe('学院包含匹配，如 "国际学院"'),
     kind: z.enum(['guide', 'exam']).optional(),
     topK: z.number().int().min(1).max(5).default(3).describe('返回最相关的前几块，默认 3'),
   }),
@@ -35,11 +36,13 @@ export const answerKnowledge = createTool({
       }),
     ),
   }),
-  execute: async ({ query, source, course, kind, topK }) => {
+  execute: async ({ query, source, course, college, kind, topK }) => {
     let hits = kbIndex.search(query) as any[];
     if (source) hits = hits.filter((h) => h.source === source);
     if (kind) hits = hits.filter((h) => h.kind === kind);
     if (course) hits = hits.filter((h) => (h.course || '').includes(course));
+    // college 只在 chunk.meta 里(未进索引),按原始记录过滤。
+    if (college) hits = hits.filter((h) => String(kbById.get(h.id)?.meta?.college || '').includes(college));
     const k = topK ?? 3;
     const results = hits.slice(0, k).map((h) => {
       const chunk = kbById.get(h.id);
