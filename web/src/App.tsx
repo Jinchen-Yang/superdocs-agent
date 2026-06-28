@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AssistantRuntimeProvider } from '@assistant-ui/react';
-import { Background } from './components/Background';
 import { AuthGate } from './components/AuthGate';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
@@ -148,22 +147,20 @@ export function App() {
   if (view !== 'app' || !user) {
     return (
       <>
-        <Background />
         <Toaster />
         {view === 'loading' && (
-          <div className="relative grid h-full place-items-center">
-            <div className="size-8 animate-spin rounded-full border-2 border-white/30 border-t-[var(--accent)]" role="status" aria-label="加载中" />
+          <div className="grid h-full place-items-center">
+            <div className="size-8 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--accent)]" role="status" aria-label="加载中" />
           </div>
         )}
-        {view === 'auth' && <div className="relative h-full"><AuthGate onAuthed={onAuthed} /></div>}
+        {view === 'auth' && <div className="h-full"><AuthGate onAuthed={onAuthed} /></div>}
       </>
     );
   }
 
   return (
     <>
-      <Background />
-      <div className="relative flex h-full p-0 md:gap-3 md:p-3">
+      <div className="flex h-full">
         <div
           className={
             mobile
@@ -185,13 +182,12 @@ export function App() {
             }}
           />
         </div>
-        {mobile && sidebarOpen && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+        {mobile && sidebarOpen && <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setSidebarOpen(false)} />}
 
         <main
-          className="frost relative flex min-w-0 flex-1 flex-col overflow-hidden md:rounded-3xl"
+          className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]"
           style={{
             // 安全区(刘海/灵动岛/Home 指示条)：移动端 main 占满全屏，需让顶栏/输入框避开。
-            // 桌面端 env(...) 解析为 0，md:p-3 外框照旧，无副作用。
             paddingTop: 'env(safe-area-inset-top)',
             paddingLeft: 'env(safe-area-inset-left)',
             paddingRight: 'env(safe-area-inset-right)',
@@ -222,7 +218,7 @@ export function App() {
             </AssistantRuntimeProvider>
           </div>
           {!embed && (
-            <div className="shrink-0 px-4 pb-1 pt-0.5 text-center text-[11px] leading-tight text-black/40 dark:text-white/40">
+            <div className="text-faint shrink-0 px-4 pb-1 pt-0.5 text-center text-[11px] leading-tight">
               <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer" className="hover:underline">新ICP备2025024799号</a>
               <span className="mx-1.5 opacity-50">·</span>
               <a href="https://github.com/Jinchen-Yang" target="_blank" rel="noreferrer" className="hover:underline">云间辞</a>

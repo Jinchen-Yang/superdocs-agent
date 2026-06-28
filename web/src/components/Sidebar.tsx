@@ -48,8 +48,8 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
             setEditing(false);
           }
         }}
-        className="w-full rounded-xl border px-2.5 py-2 text-[13.5px] outline-none"
-        style={{ borderColor: 'var(--accent)', background: 'rgba(255,255,255,.7)' }}
+        className="w-full rounded-lg border bg-[var(--surface)] px-2.5 py-2 text-[13.5px] outline-none"
+        style={{ borderColor: 'var(--accent)' }}
       />
     );
   }
@@ -58,12 +58,9 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
     <div className="group relative flex items-center">
       <button
         onClick={onSelect}
-        className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-2 pl-2.5 pr-9 text-left transition ${active ? 'frost' : 'hover:bg-white/40 dark:hover:bg-white/5'}`}
+        className={`flex min-w-0 flex-1 items-center rounded-lg py-2 pl-3 pr-9 text-left transition ${active ? 'bg-[var(--active)]' : 'hover:bg-[var(--hover)]'}`}
       >
-        <span className={`grid size-6 shrink-0 place-items-center rounded-lg text-[11px] font-bold ${active ? 'accent-grad text-white' : 'text-sub bg-black/5 dark:bg-white/10'}`}>
-          {(c.title || '·').slice(0, 1)}
-        </span>
-        <span className={`flex-1 truncate text-[13.5px] ${active ? 'font-bold' : 'text-sub'}`}>{c.title || '新对话'}</span>
+        <span className={`flex-1 truncate text-[13.5px] ${active ? 'font-medium' : 'text-sub'}`}>{c.title || '新对话'}</span>
       </button>
       <button
         onClick={(e) => {
@@ -73,16 +70,16 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
         aria-label="会话操作菜单"
         aria-haspopup="menu"
         aria-expanded={menu}
-        className="text-faint absolute right-1 grid size-7 place-items-center rounded-lg opacity-100 transition md:opacity-0 md:group-hover:opacity-100"
+        className="text-faint absolute right-1 grid size-7 place-items-center rounded-lg opacity-100 transition hover:bg-[var(--hover)] md:opacity-0 md:group-hover:opacity-100"
       >
         <MoreHorizontal className="size-4" />
       </button>
       {menu && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
-          <div className="glass absolute right-1 top-9 z-20 flex min-w-28 flex-col rounded-xl p-1.5">
+          <div className="panel absolute right-1 top-9 z-20 flex min-w-28 flex-col rounded-xl p-1.5">
             <button
-              className="rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold hover:bg-white/40 dark:hover:bg-white/10"
+              className="rounded-lg px-2.5 py-2 text-left text-[13px] font-medium hover:bg-[var(--hover)]"
               onClick={() => {
                 setMenu(false);
                 setEditing(true);
@@ -91,7 +88,7 @@ function ConvRow({ c, active, onSelect, onRename, onDelete }: {
               重命名
             </button>
             <button
-              className="rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-rose-500 hover:bg-white/40 dark:hover:bg-white/10"
+              className="rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-[var(--danger)] hover:bg-[var(--hover)]"
               onClick={() => {
                 setMenu(false);
                 if (confirm('删除这个对话？不可恢复。')) onDelete();
@@ -112,7 +109,7 @@ export function Sidebar({ conversations, activeId, user, onSelect, onNew, onRena
   const Group = ({ label, list }: { label: string; list: Conversation[] }) =>
     list.length === 0 ? null : (
       <>
-        <div className="text-faint px-2 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider">{label}</div>
+        <div className="text-faint px-3 pb-1 pt-4 text-[11px] font-medium">{label}</div>
         {list.map((c) => (
           <ConvRow
             key={c.id}
@@ -129,7 +126,7 @@ export function Sidebar({ conversations, activeId, user, onSelect, onNew, onRena
   return (
     <aside
       aria-label="会话侧边栏"
-      className="frost flex h-full w-[272px] shrink-0 flex-col gap-2 rounded-none p-3.5 md:rounded-3xl"
+      className="flex h-full w-[272px] shrink-0 flex-col gap-2 border-r border-[var(--border)] bg-[var(--bg-sidebar)] p-3.5"
       style={{
         // 移动抽屉占满左侧到屏幕边缘，避开安全区；桌面端 env(...) = 0，等同 p-3.5。
         paddingTop: 'calc(0.875rem + env(safe-area-inset-top))',
@@ -138,17 +135,17 @@ export function Sidebar({ conversations, activeId, user, onSelect, onNew, onRena
       }}
     >
       <div className="flex items-center gap-2.5 px-1.5 pb-2 pt-1">
-        <div className="accent-grad grid size-8 place-items-center rounded-[9px] shadow">
+        <div className="grid size-8 place-items-center rounded-lg bg-[var(--accent)]">
           <Sparkles className="size-4 text-white" />
         </div>
-        <span className="text-[17px] font-extrabold tracking-tight">superdocs</span>
+        <span className="text-[17px] font-semibold tracking-tight">superdocs</span>
       </div>
 
       <button
         onClick={onNew}
-        className="flex items-center gap-2.5 rounded-xl border border-white/40 bg-white/50 px-3.5 py-2.5 text-[13.5px] font-semibold transition hover:scale-[1.01] dark:bg-white/5"
+        className="surface flex items-center justify-center gap-2 rounded-full px-3.5 py-2.5 text-[13.5px] font-medium transition hover:bg-[var(--hover)]"
       >
-        <Plus className="size-4" style={{ color: 'var(--accent)' }} />
+        <Plus className="size-4 text-accent" />
         新对话 New chat
       </button>
 
@@ -160,14 +157,14 @@ export function Sidebar({ conversations, activeId, user, onSelect, onNew, onRena
 
       <button
         onClick={onOpenAccount}
-        className="flex items-center gap-2.5 rounded-xl border border-white/30 bg-white/30 p-2 text-left transition hover:bg-white/50 dark:bg-white/5"
+        className="flex items-center gap-2.5 rounded-xl p-2 text-left transition hover:bg-[var(--hover)]"
       >
-        <div className="accent-grad grid size-8 shrink-0 place-items-center rounded-[10px] text-[14px] font-bold text-white">
+        <div className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-[var(--accent)] text-[14px] font-semibold text-white">
           {(user.avatarSeed || user.displayName || '?').slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 leading-tight">
-          <div className="truncate text-[13.5px] font-bold">{user.displayName || user.username}</div>
-          <div className="text-[11.5px] font-semibold" style={{ color: 'var(--accent)' }}>账号 · 个人页</div>
+          <div className="truncate text-[13.5px] font-medium">{user.displayName || user.username}</div>
+          <div className="text-accent text-[11.5px]">账号 · 个人页</div>
         </div>
       </button>
     </aside>

@@ -56,7 +56,7 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
     }
   };
 
-  const inputCls = 'w-full rounded-xl border border-white/40 bg-white/60 px-3.5 py-3 text-base outline-none dark:bg-white/5';
+  const inputCls = 'w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-3 text-base outline-none transition focus:border-[var(--accent)]';
 
   return (
     <div
@@ -67,15 +67,15 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
         transition: 'padding-bottom .18s ease',
       }}
     >
-      <div className="glass flex w-full max-w-[380px] flex-col gap-3 rounded-3xl px-7 py-8 text-center" style={{ animation: 'riseIn .5s ease both' }}>
-        <div className="accent-grad mx-auto grid size-14 place-items-center rounded-2xl shadow-lg">
+      <div className="panel flex w-full max-w-[380px] flex-col gap-3 rounded-2xl px-7 py-8 text-center" style={{ animation: 'riseIn .4s ease both' }}>
+        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--accent)]">
           <Sparkles className="size-7 text-white" />
         </div>
-        <h1 className="m-0 text-xl font-extrabold">登录 superdocs</h1>
+        <h1 className="m-0 text-xl font-semibold">登录 superdocs</h1>
         <p className="text-sub -mt-1 text-[13px]">北邮智能助手 · 资料检索 + 新生答疑</p>
 
         {info?.gate && (
-          <div className="text-[12px] font-semibold" style={{ color: info.campus ? '#19c39c' : 'var(--accent)' }}>
+          <div className="text-[12px] font-medium" style={{ color: info.campus ? 'var(--green)' : 'var(--accent)' }}>
             {info.campus ? '✓ 你在校园网内' : '校外访问：用北邮统一认证登录即可'}
           </div>
         )}
@@ -87,7 +87,7 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
             </p>
             <input className={inputCls} placeholder="旧账号用户名" value={form.oldUsername} onChange={set('oldUsername')} onKeyDown={onKey} />
             <input className={inputCls} type="password" placeholder="旧账号密码" value={form.oldPassword} onChange={set('oldPassword')} onKeyDown={onKey} />
-            <div className="frost my-1 h-px w-full" />
+            <div className="my-1 h-px w-full bg-[var(--border)]" />
             <input className={inputCls} placeholder="学号" value={form.studentId} onChange={set('studentId')} onKeyDown={onKey} />
             <input className={inputCls} type="password" placeholder="统一认证密码" value={form.ssoPassword} onChange={set('ssoPassword')} onKeyDown={onKey} />
           </>
@@ -99,15 +99,14 @@ export function AuthGate({ onAuthed }: { onAuthed: (u: User) => void }) {
           </>
         )}
 
-        {error && <div className="text-[13px] font-semibold text-rose-500">{error}</div>}
+        {error && <div className="text-[13px] font-medium text-[var(--danger)]">{error}</div>}
 
-        <button className="accent-grad mt-1 rounded-xl py-3 text-[15px] font-bold text-white shadow-md disabled:opacity-60" onClick={submit} disabled={busy}>
+        <button className="btn-accent mt-1 rounded-xl py-3 text-[15px] font-medium" onClick={submit} disabled={busy}>
           {busy ? '请稍候…' : isMigrate ? '验证并合并' : '统一认证登录'}
         </button>
 
         <button
-          className="py-1 text-[13px] font-semibold"
-          style={{ color: 'var(--accent)' }}
+          className="text-accent py-1 text-[13px] font-medium"
           onClick={() => {
             setMode(isMigrate ? 'sso' : 'migrate');
             setError('');

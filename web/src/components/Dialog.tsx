@@ -61,7 +61,7 @@ export function Dialog({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-[rgba(30,20,60,.34)] backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
       <div ref={ref} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={className} style={{ animation: 'riseIn .3s ease both' }}>
         {children}
       </div>
