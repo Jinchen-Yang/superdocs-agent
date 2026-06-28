@@ -2,6 +2,9 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { index } from './search-index';
 
+// 资料详情页(可点开看/下载):byrdocs 前端用 ?q=<md5> 识别并展示该文档。
+const SITE = process.env.BYRDOCS_SITE_URL || 'https://byrdocs.cloudlay.cn';
+
 export const searchDocuments = createTool({
   id: 'search_documents',
   description: '检索北邮资料(教材 book / 试题 test / 资料 doc)。支持课程名、书名、作者等关键词;可按类型/课程过滤。',
@@ -16,6 +19,7 @@ export const searchDocuments = createTool({
     results: z.array(z.object({
       id: z.string(), type: z.string(), title: z.string(),
       course: z.string().optional(), year: z.string().optional(), filetype: z.string(),
+      link: z.string(),
     })),
   }),
   execute: async ({ query, type, course, limit }) => {
@@ -28,6 +32,7 @@ export const searchDocuments = createTool({
       results: hits.slice(0, lim).map((h) => ({
         id: h.id, type: h.type, title: h.title,
         course: h.course || undefined, year: h.year || undefined, filetype: h.filetype,
+        link: `${SITE}/?q=${h.id}`,
       })),
     };
   },
