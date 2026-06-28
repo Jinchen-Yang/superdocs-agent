@@ -25,10 +25,12 @@ const jsonPost = (body: unknown): RequestInit => ({
 
 export const api = {
   me: () => j<{ user: User }>('/app/auth/me'),
+  // 保留(已不在登录页使用):本地密码登录,仅对已绑定学号的账号有效。
   login: (b: { username: string; password: string }) => j<{ user: User }>('/app/auth/login', jsonPost(b)),
-  register: (b: { username: string; password: string; studentId: string; ssoPassword: string }) =>
-    j<{ user: User }>('/app/auth/register', jsonPost(b)),
   sso: (b: { studentId: string; password: string }) => j<{ user: User }>('/app/auth/sso', jsonPost(b)),
+  // 迁移：把改版前的本地账号合并进统一认证账号（旧用户名/密码 + 学号/统一认证密码）。
+  merge: (b: { oldUsername: string; oldPassword: string; studentId: string; ssoPassword: string }) =>
+    j<{ user: User }>('/app/auth/merge', jsonPost(b)),
   embed: (token: string) => j<{ user: User }>('/app/auth/embed', jsonPost({ token })),
   whoami: (): Promise<{ ip: string; campus: boolean; gate: boolean; cidrs: number } | null> =>
     j<{ ip: string; campus: boolean; gate: boolean; cidrs: number }>('/app/auth/whoami').catch(() => null),
