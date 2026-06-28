@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { BarChart3, X } from 'lucide-react';
 import { api } from '../api';
 import { Dialog } from './Dialog';
 import { toast } from './Toast';
@@ -38,28 +38,28 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
   const today = profile?.usage.today;
   const total = profile?.usage.total;
   const stat = (label: string, val: string) => (
-    <div className="frost flex-1 rounded-xl px-2.5 py-3 text-center">
-      <div className="text-lg font-extrabold">{val}</div>
+    <div className="flex-1 rounded-xl bg-[var(--surface-2)] px-2.5 py-3 text-center">
+      <div className="text-lg font-semibold">{val}</div>
       <div className="text-sub mt-0.5 text-[11px]">{label}</div>
     </div>
   );
-  const sectionLabel = 'text-faint mt-2 text-[11.5px] font-extrabold uppercase tracking-wider';
+  const sectionLabel = 'text-faint mt-2 text-[11.5px] font-medium';
 
   return (
     <Dialog
       label="账号与个人页"
       onClose={onClose}
-      className="glass fixed left-1/2 top-1/2 z-50 flex max-h-[86vh] w-[92%] max-w-[440px] -translate-x-1/2 -translate-y-1/2 flex-col gap-2.5 overflow-y-auto rounded-3xl p-5"
+      className="panel fixed left-1/2 top-1/2 z-50 flex max-h-[86vh] w-[92%] max-w-[440px] -translate-x-1/2 -translate-y-1/2 flex-col gap-2.5 overflow-y-auto rounded-3xl p-5"
     >
         <div className="flex items-center gap-3">
-          <div className="accent-grad grid size-12 shrink-0 place-items-center rounded-2xl text-xl font-extrabold text-white">
+          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--accent)] text-xl font-semibold text-white">
             {(user.avatarSeed || user.displayName || '?').slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[17px] font-extrabold">{user.displayName || user.username}</div>
-            <div className="text-sub text-[12.5px] font-semibold">@{user.username} · {user.provider}</div>
+            <div className="text-[17px] font-semibold">{user.displayName || user.username}</div>
+            <div className="text-sub text-[12.5px]">@{user.username} · {user.provider}</div>
           </div>
-          <button onClick={onClose} aria-label="关闭" className="text-sub grid size-8 place-items-center rounded-lg bg-black/5 dark:bg-white/10">
+          <button onClick={onClose} aria-label="关闭" className="text-sub grid size-8 place-items-center rounded-lg bg-[var(--surface-2)] transition hover:bg-[var(--hover)]">
             <X className="size-4" />
           </button>
         </div>
@@ -71,9 +71,9 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
           {stat('对话次数', String(total?.calls || 0))}
         </div>
         {(profile?.usage.byModel || []).map((r) => (
-          <div key={r.model} className="flex justify-between rounded-lg bg-white/40 px-3 py-1.5 text-[12.5px] dark:bg-white/5">
-            <span className="font-semibold">{r.model || '(未知)'}</span>
-            <span className="text-sub font-bold">{fmt((r.input || 0) + (r.output || 0))} tk</span>
+          <div key={r.model} className="flex justify-between rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-[12.5px]">
+            <span className="font-medium">{r.model || '(未知)'}</span>
+            <span className="text-sub font-medium">{fmt((r.input || 0) + (r.output || 0))} tk</span>
           </div>
         ))}
 
@@ -82,20 +82,20 @@ export function AccountModal({ user, onClose, onLogout, onOpenAdmin }: { user: U
           value={memory}
           onChange={(e) => setMemory(e.target.value)}
           placeholder="助手会自动记录你的学号 / 姓名 / 学院 / 常用课程 / 偏好，也可手动编辑后保存。"
-          className="min-h-28 w-full resize-y rounded-xl border border-white/40 bg-white/55 px-3.5 py-3 text-[13.5px] leading-relaxed outline-none dark:bg-white/5"
+          className="min-h-28 w-full resize-y rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-3 text-[13.5px] leading-relaxed outline-none transition focus:border-[var(--accent)]"
         />
 
         {user.isAdmin && onOpenAdmin && (
-          <button onClick={onOpenAdmin} className="frost mt-1 rounded-xl py-2.5 text-[13.5px] font-bold" style={{ color: 'var(--accent)' }}>
-            📊 管理统计
+          <button onClick={onOpenAdmin} className="surface text-accent mt-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13.5px] font-medium transition hover:bg-[var(--hover)]">
+            <BarChart3 className="size-4" /> 管理统计
           </button>
         )}
 
         <div className="mt-1.5 flex gap-2.5">
-          <button onClick={save} className="accent-grad flex-1 rounded-xl py-3 text-[14px] font-bold text-white shadow-md disabled:opacity-60" disabled={saving}>
+          <button onClick={save} className="btn-accent flex-1 rounded-xl py-3 text-[14px] font-medium" disabled={saving}>
             {saving ? '保存中…' : '保存记忆'}
           </button>
-          <button onClick={onLogout} className="rounded-xl border border-rose-400/40 px-4 py-3 text-[14px] font-bold text-rose-500">
+          <button onClick={onLogout} className="rounded-xl border border-[var(--border-strong)] px-4 py-3 text-[14px] font-medium text-[var(--danger)] transition hover:bg-[var(--hover)]">
             退出登录
           </button>
         </div>

@@ -15,7 +15,7 @@
 
   var attr = function (k, d) { return (script && script.getAttribute(k)) || d; };
   var cfg = {
-    accent: attr('data-accent', '#5b6cff'),
+    accent: attr('data-accent', '#4d6bfe'),
     side: attr('data-position', 'bottom-right').indexOf('left') >= 0 ? 'left' : 'right',
     token: attr('data-token', '') || window.SD_EMBED_TOKEN || '',
   };
@@ -52,7 +52,7 @@
   var bubble = document.createElement('button');
   bubble.className = 'bubble';
   bubble.setAttribute('aria-label', 'AI 助手');
-  bubble.style.background = 'linear-gradient(135deg,' + cfg.accent + ',#8a5cff)';
+  bubble.style.background = cfg.accent;
   bubble.innerHTML = SPARK;
   wrap.appendChild(panel);
   wrap.appendChild(bubble);

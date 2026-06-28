@@ -7,7 +7,7 @@ import {
   useAuiState,
   type AssistantState,
 } from '@assistant-ui/react';
-import { ArrowUp, Check, Copy, ImagePlus, Sparkles, Square, X } from 'lucide-react';
+import { ArrowUp, BookOpen, Check, ClipboardList, Copy, FileText, ImagePlus, Lightbulb, MapPin, Sparkles, Square, X } from 'lucide-react';
 import { MarkdownText } from './markdown-text';
 import type { Attachment } from './useChatController';
 
@@ -27,10 +27,10 @@ const isNewChat = (s: AssistantState) =>
   s.thread.messages.length === 0 && (!s.thread.isLoading || s.threads.isLoading);
 
 const CARDS = [
-  { title: '高等数学期末真题', sub: '历年卷 + 答案', prompt: '帮我找高等数学的期末真题，最好带答案', c: '#8a5cff' },
-  { title: '沙河校区生活', sub: '宿舍 / 食堂 / 校园网', prompt: '沙河校区新生生活有什么要注意的？宿舍、食堂、校园网怎么搞', c: '#3b82f6' },
-  { title: '数据结构复习资料', sub: '课件 / 题库 / 笔记', prompt: '数据结构这门课有哪些复习资料？', c: '#19c39c' },
-  { title: '报到准备', sub: '入学要带什么', prompt: '大一新生报到要提前准备和办理什么？', c: '#ff6b9d' },
+  { title: '高等数学期末真题', sub: '历年卷 + 答案', prompt: '帮我找高等数学的期末真题，最好带答案', Icon: FileText },
+  { title: '沙河校区生活', sub: '宿舍 / 食堂 / 校园网', prompt: '沙河校区新生生活有什么要注意的？宿舍、食堂、校园网怎么搞', Icon: MapPin },
+  { title: '数据结构复习资料', sub: '课件 / 题库 / 笔记', prompt: '数据结构这门课有哪些复习资料？', Icon: BookOpen },
+  { title: '报到准备', sub: '入学要带什么', prompt: '大一新生报到要提前准备和办理什么？', Icon: ClipboardList },
 ];
 
 const greeting = () => {
@@ -44,11 +44,11 @@ const greeting = () => {
 const Welcome: FC = () => {
   const send = useContext(SendContext);
   return (
-    <div className="mx-auto flex w-full max-w-[640px] flex-col items-center py-6 text-center" style={{ animation: 'riseIn .5s ease both' }}>
-      <div className="frost mb-5 grid size-16 place-items-center rounded-3xl">
-        <Sparkles className="size-7" style={{ color: 'var(--accent)' }} />
+    <div className="mx-auto flex w-full max-w-[640px] flex-col items-center py-6 text-center" style={{ animation: 'riseIn .4s ease both' }}>
+      <div className="mb-5 grid size-14 place-items-center rounded-2xl bg-[var(--accent-tint)]">
+        <Sparkles className="size-6 text-accent" />
       </div>
-      <h1 className="m-0 text-2xl font-extrabold tracking-tight md:text-3xl">{greeting()}</h1>
+      <h1 className="m-0 text-[26px] font-semibold tracking-tight">{greeting()}</h1>
       <p className="text-sub mb-7 mt-2 max-w-[440px] text-[15px] leading-relaxed">
         我是 superdocs 助手，帮北邮的同学查资料、看真题、答疑解惑。试试下面的，或直接提问。
       </p>
@@ -57,13 +57,13 @@ const Welcome: FC = () => {
           <button
             key={c.title}
             onClick={() => send(c.prompt)}
-            className="frost group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-transform hover:-translate-y-0.5"
+            className="surface group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition hover:bg-[var(--hover)]"
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl" style={{ background: `${c.c}22`, border: `1px solid ${c.c}33` }}>
-              <Sparkles className="size-5" style={{ color: c.c }} />
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-tint)] text-accent">
+              <c.Icon className="size-[18px]" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-bold">{c.title}</span>
+              <span className="block text-sm font-semibold">{c.title}</span>
               <span className="text-sub block text-[12.5px]">{c.sub}</span>
             </span>
           </button>
@@ -74,8 +74,8 @@ const Welcome: FC = () => {
 };
 
 const UserMessage: FC = () => (
-  <MessagePrimitive.Root className="flex justify-end" style={{ animation: 'msgIn .35s ease both' }}>
-    <div className="accent-grad max-w-[85%] whitespace-pre-wrap break-words rounded-[18px_18px_5px_18px] border border-white/25 px-3.5 py-2 text-[15px] leading-snug text-white shadow-lg">
+  <MessagePrimitive.Root className="flex justify-end" style={{ animation: 'msgIn .3s ease both' }}>
+    <div className="bubble-user max-w-[85%] whitespace-pre-wrap break-words rounded-[18px_18px_4px_18px] px-3.5 py-2.5 text-[15px] leading-relaxed">
       <MessagePrimitive.Parts />
     </div>
   </MessagePrimitive.Root>
@@ -95,7 +95,7 @@ const CopyButton: FC<{ text: string }> = ({ text }) => {
         );
       }}
       aria-label="复制回答"
-      className="text-faint mt-1.5 flex items-center gap-1 text-[11.5px] transition hover:text-[var(--sub)]"
+      className="text-faint mt-2 flex items-center gap-1 text-[11.5px] transition hover:text-[var(--sub)]"
     >
       {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
       {copied ? '已复制' : '复制'}
@@ -109,9 +109,11 @@ const CopyButton: FC<{ text: string }> = ({ text }) => {
 const ReasoningPart = ({ text }: { text?: string }) => {
   if (!text || !text.trim()) return null;
   return (
-    <details open className="aui-reasoning mb-2 rounded-xl border border-white/30 bg-black/[0.04] px-3 py-2 dark:bg-white/5">
-      <summary className="text-faint cursor-pointer select-none text-[12px] font-medium">💭 思考过程</summary>
-      <div className="text-sub mt-1.5 max-h-48 overflow-auto whitespace-pre-wrap text-[12.5px] leading-relaxed opacity-80">
+    <details open className="aui-reasoning mb-3">
+      <summary className="text-faint flex cursor-pointer select-none items-center gap-1.5 text-[12.5px] font-medium">
+        <Lightbulb className="size-3.5" /> 思考过程
+      </summary>
+      <div className="text-sub mt-2 max-h-48 overflow-auto whitespace-pre-wrap border-l-2 border-[var(--border-strong)] pl-3 text-[12.5px] leading-relaxed">
         {text}
       </div>
     </details>
@@ -124,12 +126,10 @@ const AssistantMessage: FC = () => {
     const c = s.message.content as { type?: string; text?: string }[];
     return Array.isArray(c) ? c.filter((p) => p?.type === 'text').map((p) => p?.text || '').join('') : '';
   });
+  // 简约风：助手消息无头像、无气泡，整列纯 Markdown（参考 DeepSeek）。
   return (
-    <MessagePrimitive.Root className="flex items-start gap-3" style={{ animation: 'msgIn .35s ease both' }}>
-      <div className="accent-grad mt-0.5 grid size-8 shrink-0 place-items-center rounded-[10px] shadow">
-        <Sparkles className="size-4 text-white" />
-      </div>
-      <div className="frost min-w-0 max-w-[88%] rounded-[6px_20px_20px_20px] px-4 py-3 text-[15px] leading-relaxed">
+    <MessagePrimitive.Root className="min-w-0" style={{ animation: 'msgIn .3s ease both' }}>
+      <div className="min-w-0 text-[15px] leading-relaxed">
         <MessagePrimitive.Parts components={{ Text: MarkdownText, Reasoning: ReasoningPart }} />
         {text.trim() && <CopyButton text={text} />}
       </div>
@@ -150,11 +150,11 @@ const Composer: FC = () => {
       {attachment && (
         <div className="mb-2 flex items-center gap-2 px-1">
           <div className="relative">
-            <img src={attachment.dataUrl} alt={attachment.name} className="size-16 rounded-xl border border-white/30 object-cover" />
+            <img src={attachment.dataUrl} alt={attachment.name} className="size-16 rounded-xl border border-[var(--border)] object-cover" />
             <button
               onClick={clear}
               aria-label="移除图片"
-              className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-rose-500 text-white shadow"
+              className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-black/60 text-white"
             >
               <X className="size-3" />
             </button>
@@ -162,7 +162,7 @@ const Composer: FC = () => {
           <span className="text-faint text-[12px]">已自动切换多模态模型识别图片</span>
         </div>
       )}
-      <ComposerPrimitive.Root className="glass flex items-end gap-1.5 rounded-3xl py-2 pl-2 pr-2">
+      <ComposerPrimitive.Root className="surface flex items-end gap-1.5 rounded-[20px] py-2 pl-2 pr-2">
         <input
           ref={fileRef}
           type="file"
@@ -179,7 +179,7 @@ const Composer: FC = () => {
           onClick={() => fileRef.current?.click()}
           aria-label="上传图片"
           title="上传图片（自动切换多模态模型）"
-          className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--sub)] transition hover:bg-black/5 dark:hover:bg-white/10"
+          className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--sub)] transition hover:bg-[var(--hover)]"
         >
           <ImagePlus className="size-5" />
         </button>
@@ -193,14 +193,14 @@ const Composer: FC = () => {
         />
         <AuiIf condition={(s) => !s.thread.isRunning}>
           <ComposerPrimitive.Send asChild>
-            <button aria-label="发送" className="accent-grad grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-md transition-transform hover:scale-105 disabled:opacity-40">
+            <button aria-label="发送" className="btn-accent grid size-9 shrink-0 place-items-center rounded-full disabled:opacity-40">
               <ArrowUp className="size-5" />
             </button>
           </ComposerPrimitive.Send>
         </AuiIf>
         <AuiIf condition={(s) => s.thread.isRunning}>
           <ComposerPrimitive.Cancel asChild>
-            <button aria-label="停止生成" className="accent-grad grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-md">
+            <button aria-label="停止生成" className="btn-accent grid size-9 shrink-0 place-items-center rounded-full">
               <Square className="size-3.5 fill-current" />
             </button>
           </ComposerPrimitive.Cancel>
@@ -220,7 +220,7 @@ export const Thread: FC = () => {
           <AuiIf condition={isNewChat}>
             <Welcome />
           </AuiIf>
-          <div className="flex flex-col gap-6 pb-4 empty:hidden">
+          <div className="flex flex-col gap-7 pb-4 empty:hidden">
             <ThreadPrimitive.Messages>{() => <Msg />}</ThreadPrimitive.Messages>
           </div>
         </div>
