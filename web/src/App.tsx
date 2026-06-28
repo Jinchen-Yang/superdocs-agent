@@ -221,6 +221,13 @@ export function App() {
               </ChatSendProvider>
             </AssistantRuntimeProvider>
           </div>
+          {!embed && (
+            <div className="shrink-0 px-4 pb-1 pt-0.5 text-center text-[11px] leading-tight text-black/40 dark:text-white/40">
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer" className="hover:underline">新ICP备2025024799号</a>
+              <span className="mx-1.5 opacity-50">·</span>
+              <a href="https://github.com/yangjinchen" target="_blank" rel="noreferrer" className="hover:underline">云间辞</a>
+            </div>
+          )}
         </main>
       </div>
       {showAccount && (
