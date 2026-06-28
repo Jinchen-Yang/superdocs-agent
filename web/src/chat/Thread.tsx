@@ -103,6 +103,21 @@ const CopyButton: FC<{ text: string }> = ({ text }) => {
   );
 };
 
+// 思考过程渲染：MiMo / DeepSeek-思考 会先流式输出 reasoning，再出正文。
+// 此前 Parts 只给了 Text、没给 Reasoning 组件 → 思考内容被丢弃不显示 →
+// 看起来"想完才蹦答案"。这里把它渲染成可折叠的流式块，思考阶段就有可见反馈。
+const ReasoningPart = ({ text }: { text?: string }) => {
+  if (!text || !text.trim()) return null;
+  return (
+    <details open className="aui-reasoning mb-2 rounded-xl border border-white/30 bg-black/[0.04] px-3 py-2 dark:bg-white/5">
+      <summary className="text-faint cursor-pointer select-none text-[12px] font-medium">💭 思考过程</summary>
+      <div className="text-sub mt-1.5 max-h-48 overflow-auto whitespace-pre-wrap text-[12.5px] leading-relaxed opacity-80">
+        {text}
+      </div>
+    </details>
+  );
+};
+
 const AssistantMessage: FC = () => {
   // 取本条助手消息的正文(text 分块)用于复制；reasoning/检索占位不计入。
   const text = useAuiState((s) => {
@@ -115,7 +130,7 @@ const AssistantMessage: FC = () => {
         <Sparkles className="size-4 text-white" />
       </div>
       <div className="frost min-w-0 max-w-[88%] rounded-[6px_20px_20px_20px] px-4 py-3 text-[15px] leading-relaxed">
-        <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
+        <MessagePrimitive.Parts components={{ Text: MarkdownText, Reasoning: ReasoningPart }} />
         {text.trim() && <CopyButton text={text} />}
       </div>
     </MessagePrimitive.Root>
