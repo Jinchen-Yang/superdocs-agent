@@ -34,3 +34,23 @@ export async function query<T = any>(text: string, params?: any[]): Promise<T[]>
   const res = await getPool().query<T>(text, params);
   return res.rows;
 }
+
+// 事务助手：把多步写操作放进单个连接的 BEGIN/COMMIT，失败整体 ROLLBACK（账号合并等需要原子性）。
+export async function withTransaction<T>(
+  fn: (q: <R = any>(text: string, params?: any[]) => Promise<R[]>) => Promise<T>,
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const q = async <R = any>(text: string, params?: any[]): Promise<R[]> =>
+      (await client.query<R>(text, params)).rows;
+    const out = await fn(q);
+    await client.query('COMMIT');
+    return out;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}

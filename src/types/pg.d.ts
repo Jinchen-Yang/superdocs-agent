@@ -12,9 +12,15 @@ declare module 'pg' {
     keepAlive?: boolean;
     statement_timeout?: number;
   }
+  // 单个连接（事务用）：从 Pool.connect() 取出，用完 release() 归还。
+  export interface PoolClient {
+    query<R = any>(text: string, params?: any[]): Promise<QueryResult<R>>;
+    release(): void;
+  }
   export class Pool {
     constructor(config?: PoolConfig);
     query<R = any>(text: string, params?: any[]): Promise<QueryResult<R>>;
+    connect(): Promise<PoolClient>;
     on(event: 'error', listener: (err: Error) => void): this;
     on(event: string, listener: (...args: any[]) => void): this;
     end(): Promise<void>;

@@ -1,7 +1,7 @@
 import { registerApiRoute } from '@mastra/core/server';
 import { ensureSchema } from '../db/schema';
 import { issueSession, clearSession, readSession } from '../auth/session';
-import { buptSsoVerify, findOrCreateSsoUser, localVerify, bindLocalCredentials } from '../auth/provider';
+import { buptSsoVerify, findOrCreateSsoUser, localVerify, migrateLocalToSso } from '../auth/provider';
 import { verifyEmbedToken } from '../auth/embed';
 import { getUserById, publicUser, bumpSessionEpoch } from '../auth/user';
 import { authed } from '../auth/guard';
@@ -18,44 +18,55 @@ const ssoErrMsg = (e: any): string => {
 };
 
 export const authRoutes = [
-  // 注册 = 把本地用户名/密码绑定到北邮统一认证（需 学号 + 统一认证密码 验证身份）。
+  // 注册已关闭：一律走北邮统一认证(SSO)。保留端点，给可能缓存旧前端的用户一个明确提示。
   registerApiRoute('/app/auth/register', {
+    method: 'POST',
+    handler: async (c) => c.json({ error: '注册已关闭，请使用「北邮统一认证」登录' }, 410),
+  }),
+
+  // 迁移/合并：把改版前的本地账号并入统一认证账号（旧用户名/密码 + 学号/统一认证密码，两边都验证）。
+  registerApiRoute('/app/auth/merge', {
     method: 'POST',
     handler: async (c) => {
       await ensureSchema();
-      if (!rateLimit(`register:${clientIp(c)}`, 5, 10 * 60_000)) {
-        return c.json({ error: '注册过于频繁，请稍后再试' }, 429);
+      if (!rateLimit(`merge:${clientIp(c)}`, 5, 10 * 60_000)) {
+        return c.json({ error: '操作过于频繁，请稍后再试' }, 429);
       }
       let body: any;
       try { body = await c.req.json(); } catch { return c.json({ error: '请求体需为 JSON' }, 400); }
-      const username = String(body?.username || '').trim();
-      const password = String(body?.password || '');
+      const oldUsername = String(body?.oldUsername || '').trim();
+      const oldPassword = String(body?.oldPassword || '');
       const studentId = String(body?.studentId || '').trim();
       const ssoPassword = String(body?.ssoPassword || '');
-      if (username.length < 2) return c.json({ error: '用户名至少 2 个字符' }, 400);
-      if (password.length < 8) return c.json({ error: '本地密码至少 8 位' }, 400);
-      if (!studentId || !ssoPassword) return c.json({ error: '请填写学号和统一认证密码以绑定' }, 400);
+      if (!oldUsername || !oldPassword) return c.json({ error: '请填写旧账号的用户名和密码' }, 400);
+      if (!studentId || !ssoPassword) return c.json({ error: '请填写学号和统一认证密码' }, 400);
       // 账号维度限流：防 IP 轮换下针对单个学号反复试统一认证密码。
-      if (!rateLimit(`register-acct:${studentId}`, 5, 10 * 60_000)) {
+      if (!rateLimit(`merge-acct:${studentId}`, 5, 10 * 60_000)) {
         return c.json({ error: '该学号尝试过于频繁，请稍后再试' }, 429);
       }
-
       let identity: { studentId: string; realName: string };
       try {
         identity = await buptSsoVerify(studentId, ssoPassword);
       } catch (e: any) {
         return c.json({ error: ssoErrMsg(e) }, 401);
       }
-      const r = await bindLocalCredentials(identity.studentId, identity.realName, username, password);
+      let r: { userId: string } | { error: string };
+      try {
+        r = await migrateLocalToSso(oldUsername, oldPassword, identity.studentId, identity.realName);
+      } catch (e: any) {
+        // 极端并发下唯一索引冲突(23505)等 → 让用户重试，而非裸 500。
+        return c.json({ error: '操作冲突，请稍后重试' }, 409);
+      }
       if ('error' in r) return c.json({ error: r.error }, 409);
       const u = await getUserById(r.userId);
-      if (!u) return c.json({ error: '账号创建异常，请重试' }, 500);
+      if (!u) return c.json({ error: '合并异常，请重试' }, 500);
+      clearRateLimit(`merge-acct:${studentId}`);
       issueSession(c, u.id, u.session_epoch);
       return c.json({ user: publicUser(u) });
     },
   }),
 
-  // 本地密码登录（仅已绑定学号的账号可用）。
+  // 本地密码登录（仅已绑定学号且设了密码的账号可用；保留作为已迁移用户的备用入口，前端不再主推）。
   registerApiRoute('/app/auth/login', {
     method: 'POST',
     handler: async (c) => {
@@ -82,7 +93,7 @@ export const authRoutes = [
     },
   }),
 
-  // 北邮统一认证登录（学号 + 密码）。
+  // 北邮统一认证登录（学号 + 密码）—— 主登录方式。
   registerApiRoute('/app/auth/sso', {
     method: 'POST',
     handler: async (c) => {
