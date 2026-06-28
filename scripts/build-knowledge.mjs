@@ -49,13 +49,15 @@ const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => {
 const chunks = [];
 
 // ---- 生存指南：按 ## 切块 ----
-const gSha = sha('bupt-survival-guide');
 const GROOT = join(WORK, 'bupt-survival-guide/src/content/docs');
 for (const file of walk(GROOT)) {
   const rel = relative(GROOT, file);
   const { fm, body } = readFm(readFileSync(file, 'utf8'));
   const docTitle = fm.title || rel.replace(/\.mdx?$/, '');
-  const url = `https://github.com/byrdocs/bupt-survival-guide/blob/${gSha}/src/content/docs/${rel.split(sep).map(encodeURIComponent).join('/')}`;
+  // 指向线上生存指南 guide.byrdocs.org(Starlight 用结尾斜杠),而非 GitHub 源码。
+  const guideParts = rel.replace(/\.mdx?$/, '').split(sep);
+  if (guideParts[guideParts.length - 1] === 'index') guideParts.pop();
+  const url = `https://guide.byrdocs.org/${guideParts.map(encodeURIComponent).join('/')}/`;
   let i = 0;
   for (const part of body.split(/\r?\n(?=##\s)/)) {
     const hm = part.match(/^##\s+(.+)/);
@@ -67,7 +69,6 @@ for (const file of walk(GROOT)) {
 }
 
 // ---- 真题wiki：一卷一块 ----
-const nSha = sha('byrdocs-neowiki');
 const EX = join(WORK, 'byrdocs-neowiki/exams');
 for (const dir of readdirSync(EX)) {
   const mdx = join(EX, dir, 'index.mdx');
@@ -79,7 +80,7 @@ for (const dir of readdirSync(EX)) {
   if (clean.length < 20) continue;
   chunks.push({ id: `neowiki:${dir}`, source: 'neowiki', kind: 'exam',
     title: `${course} ${year} ${stage}`.replace(/\s+/g, ' ').trim(), course,
-    url: `https://github.com/byrdocs/byrdocs-neowiki/tree/${nSha}/exams/${encodeURIComponent(dir)}`,
+    url: `https://wiki.byrdocs.org/exam/${encodeURIComponent(dir)}/`,
     text: clean.slice(0, 8000), meta: { year: String(year), stage: String(stage), type: String(type), college } });
 }
 
