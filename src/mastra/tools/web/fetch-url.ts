@@ -396,7 +396,7 @@ export const fetchUrl = createTool({
       if (!resp) throw new Error('无响应');
 
       const ctype = String(resp.headers['content-type'] || '');
-      const decoded = decompress(resp.body, resp.headers['content-encoding'] as string | undefined);
+      const decoded = decompress(resp.body, resp.headers['content-encoding']);
 
       const isText = /text\/|application\/(json|xml|xhtml|.*\+xml|javascript)/i.test(ctype) || ctype === '';
       if (!isText) {

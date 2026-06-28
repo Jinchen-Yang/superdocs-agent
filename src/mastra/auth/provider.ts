@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { login as buptLogin } from '@byrdocs/bupt-auth';
 import { query, withTransaction } from '../db/pool';
-import { hashPassword, verifyPassword } from './password';
+import { verifyPassword } from './password';
 import { withTimeout, withDeadline } from '../util/fetch';
 
 const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 10_000;
