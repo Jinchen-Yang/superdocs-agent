@@ -87,7 +87,8 @@ export const chatRoutes = [
 
       // token 关键:封顶工具循环。无上限(Mastra 默认 100 步)时模型会狂调 search_knowledge
       // (实测一问 30+ 次,每次重发上下文 → input 爆炸)。AI SDK v6 用 stopWhen 控制(maxSteps 不生效)。
-      const streamOpts: any = { model: resolved, memory: { resource, thread: threadId }, stopWhen: stepCountIs(4) };
+      // temperature 调低收敛发散性(团队反馈"输出花哨/不可信")。DeepSeek 思考模式会忽略它,非思考模式生效。
+      const streamOpts: any = { model: resolved, memory: { resource, thread: threadId }, stopWhen: stepCountIs(4), temperature: Number(process.env.LLM_TEMPERATURE) || 0.3 };
       if (providerOptions) streamOpts.providerOptions = providerOptions;
       // 流初始化阶段(建连/鉴权/超时)抛错时给结构化 502，而非裸 500；细节只进日志不回显，避免泄露内部拓扑。
       let result: any;
